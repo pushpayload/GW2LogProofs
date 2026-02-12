@@ -36,12 +36,14 @@ std::vector<Boss> sortedStrikeBosses {
 		Freezie,
 		CaptainMaiTrin, Ankka, MinisterLi, VoidAmalgamate,
 		OldLionsCourt,
-		Dagda, Cerus
+		Dagda, Cerus,
+		Kela
 };
 std::vector<Boss> sortedStrikeCMBosses {
 		CaptainMaiTrinCM, AnkkaCM, MinisterLiCM, VoidAmalgamateCM,
 		OldLionsCourtCM,
-		DagdaCM, CerusCM
+		DagdaCM, CerusCM,
+		KelaCM
 };
 std::vector<Boss> sortedStrikeLMBosses {
 		CerusCM
@@ -73,12 +75,14 @@ std::vector<Boss> sortedKpmeRaidCMBosses {
 std::vector<Boss> sortedKpmeStrikeBosses {
 		CaptainMaiTrin, Ankka, MinisterLi, VoidAmalgamate,
 		OldLionsCourt,
-		Dagda, Cerus
+		Dagda, Cerus,
+		Kela
 };
 std::vector<Boss> sortedKpmeStrikeCMBosses {
 		CaptainMaiTrinCM, AnkkaCM, MinisterLiCM, VoidAmalgamateCM,
 		OldLionsCourtCM,
-		DagdaCM, CerusCM
+		DagdaCM, CerusCM,
+		KelaCM
 };
 
 std::string GetBossName(Boss boss) {

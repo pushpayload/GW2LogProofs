@@ -218,6 +218,7 @@ BossGroup KpmeBossProvider::CreateCustomBossGroup(const CustomTab& tab) const {
 						 CerusCM,
 						 Kela,
 						 KelaToken,
+						 KelaCM,
 				 }) {
 				if (GetKpMeBossToken(boss) == proof.proofId || GetKpMeBossCoffer(boss) == proof.proofId) {
 					bosses.push_back({boss, type});
