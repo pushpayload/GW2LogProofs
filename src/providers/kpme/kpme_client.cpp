@@ -16,47 +16,47 @@ namespace Kpme {
 				}
 			}
 
-			if (j.contains("killproofs")) {
-				if (j.at("killproofs").is_array()) {
-					for (const auto& item : j.at("killproofs")) {
-						if (item.is_object()) {
-							if (item.contains("name") && item.contains("amount")) {
-								if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
-									r.self.killproofs[item.at("name")] = item.at("amount");
-								}
+		if (j.contains("killproofs")) {
+			if (j.at("killproofs").is_array()) {
+				for (const auto& item : j.at("killproofs")) {
+					if (item.is_object()) {
+						if (item.contains("name") && item.contains("amount")) {
+							if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
+								r.self.killproofs[item.at("name")] += item.at("amount").get<int>();
 							}
 						}
 					}
 				}
 			}
+		}
 
-			if (j.contains("tokens")) {
-				if (j.at("tokens").is_array()) {
-					for (const auto& item : j.at("tokens")) {
-						if (item.is_object()) {
-							if (item.contains("name") && item.contains("amount")) {
-								if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
-									r.self.tokens[item.at("name")] = item.at("amount");
-								}
+		if (j.contains("tokens")) {
+			if (j.at("tokens").is_array()) {
+				for (const auto& item : j.at("tokens")) {
+					if (item.is_object()) {
+						if (item.contains("name") && item.contains("amount")) {
+							if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
+								r.self.tokens[item.at("name")] += item.at("amount").get<int>();
 							}
 						}
 					}
 				}
 			}
+		}
 
-			if (j.contains("coffers")) {
-				if (j.at("coffers").is_array()) {
-					for (const auto& item : j.at("coffers")) {
-						if (item.is_object()) {
-							if (item.contains("name") && item.contains("amount")) {
-								if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
-									r.self.coffers[item.at("name")] = item.at("amount");
-								}
+		if (j.contains("coffers")) {
+			if (j.at("coffers").is_array()) {
+				for (const auto& item : j.at("coffers")) {
+					if (item.is_object()) {
+						if (item.contains("name") && item.contains("amount")) {
+							if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
+								r.self.coffers[item.at("name")] += item.at("amount").get<int>();
 							}
 						}
 					}
 				}
 			}
+		}
 
 			if (j.contains("titles")) {
 				if (j.at("titles").is_array()) {
@@ -72,49 +72,49 @@ namespace Kpme {
 				}
 			}
 
-			if (j.contains("linked_totals")) {
-				if (j.at("linked_totals").is_object()) {
-					if (j.at("linked_totals").contains("killproofs")) {
-						if (j.at("linked_totals").at("killproofs").is_array()) {
-							for (const auto& item : j.at("linked_totals").at("killproofs")) {
-								if (item.is_object()) {
-									if (item.contains("name") && item.contains("amount")) {
-										if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
-											r.shared.killproofs[item.at("name")] = item.at("amount");
-										}
+		if (j.contains("linked_totals")) {
+			if (j.at("linked_totals").is_object()) {
+				if (j.at("linked_totals").contains("killproofs")) {
+					if (j.at("linked_totals").at("killproofs").is_array()) {
+						for (const auto& item : j.at("linked_totals").at("killproofs")) {
+							if (item.is_object()) {
+								if (item.contains("name") && item.contains("amount")) {
+									if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
+										r.shared.killproofs[item.at("name")] += item.at("amount").get<int>();
 									}
 								}
 							}
 						}
 					}
+				}
 
-					if (j.at("linked_totals").contains("tokens")) {
-						if (j.at("linked_totals").at("tokens").is_array()) {
-							for (const auto& item : j.at("linked_totals").at("tokens")) {
-								if (item.is_object()) {
-									if (item.contains("name") && item.contains("amount")) {
-										if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
-											r.shared.tokens[item.at("name")] = item.at("amount");
-										}
+				if (j.at("linked_totals").contains("tokens")) {
+					if (j.at("linked_totals").at("tokens").is_array()) {
+						for (const auto& item : j.at("linked_totals").at("tokens")) {
+							if (item.is_object()) {
+								if (item.contains("name") && item.contains("amount")) {
+									if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
+										r.shared.tokens[item.at("name")] += item.at("amount").get<int>();
 									}
 								}
 							}
 						}
 					}
+				}
 
-					if (j.at("linked_totals").contains("coffers")) {
-						if (j.at("linked_totals").at("coffers").is_array()) {
-							for (const auto& item : j.at("linked_totals").at("coffers")) {
-								if (item.is_object()) {
-									if (item.contains("name") && item.contains("amount")) {
-										if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
-											r.shared.coffers[item.at("name")] = item.at("amount");
-										}
+				if (j.at("linked_totals").contains("coffers")) {
+					if (j.at("linked_totals").at("coffers").is_array()) {
+						for (const auto& item : j.at("linked_totals").at("coffers")) {
+							if (item.is_object()) {
+								if (item.contains("name") && item.contains("amount")) {
+									if (item.at("name").is_string() && item.at("amount").is_number_integer()) {
+										r.shared.coffers[item.at("name")] += item.at("amount").get<int>();
 									}
 								}
 							}
 						}
 					}
+				}
 
 					if (j.at("linked_totals").contains("titles")) {
 						if (j.at("linked_totals").at("titles").is_array()) {
@@ -138,32 +138,32 @@ namespace Kpme {
 						LinkedAccount linkedAccount;
 						linkedAccount.name = account.at("account_name").get<std::string>();
 
-						// Parse killproofs
-						if (account.contains("killproofs") && account.at("killproofs").is_array()) {
-							for (const auto& kp : account.at("killproofs")) {
-								if (kp.contains("name") && kp.contains("amount")) {
-									linkedAccount.data.killproofs[kp.at("name")] = kp.at("amount");
-								}
+					// Parse killproofs
+					if (account.contains("killproofs") && account.at("killproofs").is_array()) {
+						for (const auto& kp : account.at("killproofs")) {
+							if (kp.contains("name") && kp.contains("amount")) {
+								linkedAccount.data.killproofs[kp.at("name")] += kp.at("amount").get<int>();
 							}
 						}
+					}
 
-						// Parse tokens
-						if (account.contains("tokens") && account.at("tokens").is_array()) {
-							for (const auto& token : account.at("tokens")) {
-								if (token.contains("name") && token.contains("amount")) {
-									linkedAccount.data.tokens[token.at("name")] = token.at("amount");
-								}
+					// Parse tokens
+					if (account.contains("tokens") && account.at("tokens").is_array()) {
+						for (const auto& token : account.at("tokens")) {
+							if (token.contains("name") && token.contains("amount")) {
+								linkedAccount.data.tokens[token.at("name")] += token.at("amount").get<int>();
 							}
 						}
+					}
 
-						// Parse coffers
-						if (account.contains("coffers") && account.at("coffers").is_array()) {
-							for (const auto& coffer : account.at("coffers")) {
-								if (coffer.contains("name") && coffer.contains("amount")) {
-									linkedAccount.data.coffers[coffer.at("name")] = coffer.at("amount");
-								}
+					// Parse coffers
+					if (account.contains("coffers") && account.at("coffers").is_array()) {
+						for (const auto& coffer : account.at("coffers")) {
+							if (coffer.contains("name") && coffer.contains("amount")) {
+								linkedAccount.data.coffers[coffer.at("name")] += coffer.at("amount").get<int>();
 							}
 						}
+					}
 
 						r.linked_accounts.push_back(linkedAccount);
 					}

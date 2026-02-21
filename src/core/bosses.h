@@ -112,7 +112,10 @@ enum Boss {
 	Dagda = 25705,
 	DagdaCM = -25705,
 	Cerus = 25989,
-	CerusCM = -25989
+	CerusCM = -25989,
+	Kela = 27124,
+	KelaToken = 27670,
+	KelaCM = -27124,
 };
 
 extern std::vector<Boss> sortedRaidBosses;

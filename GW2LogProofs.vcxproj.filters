@@ -22,27 +22,32 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp">
       <Filter>submodules\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="src\bosses.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\entry.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\gui.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\settings.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\shared.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\kp_loader.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\log_proofs.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
+    <ClCompile Include="src\core\bosses.cpp" />
+    <ClCompile Include="src\core\boss_registry.cpp" />
+    <ClCompile Include="src\core\boss_registry_init.cpp" />
+    <ClCompile Include="src\providers\wingman\wingman_boss_provider.cpp" />
+    <ClCompile Include="src\providers\kpme\kpme_boss_provider.cpp" />
+    <ClCompile Include="src\ui\gui.cpp" />
+    <ClCompile Include="src\core\event_handlers.cpp" />
+    <ClCompile Include="src\core\player_manager.cpp" />
+    <ClCompile Include="src\core\settings.cpp" />
+    <ClCompile Include="src\core\shared.cpp" />
+    <ClCompile Include="src\core\tab_config.cpp" />
+    <ClCompile Include="src\core\lazy_load_manager.cpp" />
+    <ClCompile Include="src\providers\common\provider_registry.cpp" />
+    <ClCompile Include="src\utils\httpclient.cpp" />
+    <ClCompile Include="src\ui\gui_settings.cpp" />
+    <ClCompile Include="src\providers\wingman\wingman_provider.cpp" />
+    <ClCompile Include="src\providers\wingman\wingman_client.cpp" />
+    <ClCompile Include="src\providers\kpme\kpme_provider.cpp" />
+    <ClCompile Include="src\providers\kpme\kpme_client.cpp" />
+    <ClCompile Include="src\core\player_tracker_manager.cpp" />
+    <ClCompile Include="src\trackers\arcdps_tracker.cpp" />
+    <ClCompile Include="src\trackers\unofficial_extras_tracker.cpp" />
+    <ClCompile Include="src\trackers\realtime_api_tracker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\nexus\Nexus.h">
@@ -81,18 +86,6 @@
     <ClInclude Include="src\arcdps\arcdps.h">
       <Filter>submodules</Filter>
     </ClInclude>
-    <ClInclude Include="src\bosses.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\gui.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\settings.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\shared.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\resource.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -102,21 +95,35 @@
     <ClInclude Include="src\nlohmann\json.hpp">
       <Filter>submodules\nlohmann</Filter>
     </ClInclude>
-    <ClInclude Include="src\threadpool.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\httpclient.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kp_loader.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\log_proofs.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\imgui_extensions.h">
-      <Filter>src</Filter>
-    </ClInclude>
+    <ClInclude Include="src\ui\imgui_extensions.h" />
+    <ClInclude Include="src\core\bosses.h" />
+    <ClInclude Include="src\core\boss_registry.h" />
+    <ClInclude Include="src\providers\wingman\wingman_boss_provider.h" />
+    <ClInclude Include="src\providers\kpme\kpme_boss_provider.h" />
+    <ClInclude Include="src\ui\gui.h" />
+    <ClInclude Include="src\utils\httpclient.h" />
+    <ClInclude Include="src\core\event_handlers.h" />
+    <ClInclude Include="src\core\player_manager.h" />
+    <ClInclude Include="src\core\settings.h" />
+    <ClInclude Include="src\core\shared.h" />
+    <ClInclude Include="src\core\tab_config.h" />
+    <ClInclude Include="src\core\lazy_load_manager.h" />
+    <ClInclude Include="src\providers\common\data_provider.h" />
+    <ClInclude Include="src\providers\common\provider_registry.h" />
+    <ClInclude Include="src\core\player_data.h" />
+    <ClInclude Include="src\providers\wingman\wingman_provider.h" />
+    <ClInclude Include="src\providers\wingman\wingman_client.h" />
+    <ClInclude Include="src\providers\wingman\wingman_types.h" />
+    <ClInclude Include="src\providers\kpme\kpme_provider.h" />
+    <ClInclude Include="src\providers\kpme\kpme_client.h" />
+    <ClInclude Include="src\providers\kpme\kpme_types.h" />
+    <ClInclude Include="src\core\player_tracker.h" />
+    <ClInclude Include="src\core\player_tracker_manager.h" />
+    <ClInclude Include="src\core\player_info.h" />
+    <ClInclude Include="src\trackers\arcdps_tracker.h" />
+    <ClInclude Include="src\trackers\unofficial_extras_tracker.h" />
+    <ClInclude Include="src\trackers\realtime_api_tracker.h" />
+    <ClInclude Include="src\realtime_api\RTAPI.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="submodules">
@@ -517,6 +524,24 @@
       <Filter>resources</Filter>
     </Image>
     <Image Include="resources\Ura.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="src\resources\Kela.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="src\resources\Ura.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\Kela.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="src\resources\Kinfall.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="src\resources\Greer.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="src\resources\Decima.png">
       <Filter>resources</Filter>
     </Image>
   </ItemGroup>

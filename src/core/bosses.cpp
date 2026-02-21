@@ -36,12 +36,14 @@ std::vector<Boss> sortedStrikeBosses {
 		Freezie,
 		CaptainMaiTrin, Ankka, MinisterLi, VoidAmalgamate,
 		OldLionsCourt,
-		Dagda, Cerus
+		Dagda, Cerus,
+		Kela
 };
 std::vector<Boss> sortedStrikeCMBosses {
 		CaptainMaiTrinCM, AnkkaCM, MinisterLiCM, VoidAmalgamateCM,
 		OldLionsCourtCM,
-		DagdaCM, CerusCM
+		DagdaCM, CerusCM,
+		KelaCM
 };
 std::vector<Boss> sortedStrikeLMBosses {
 		CerusCM
@@ -73,12 +75,14 @@ std::vector<Boss> sortedKpmeRaidCMBosses {
 std::vector<Boss> sortedKpmeStrikeBosses {
 		CaptainMaiTrin, Ankka, MinisterLi, VoidAmalgamate,
 		OldLionsCourt,
-		Dagda, Cerus
+		Dagda, Cerus,
+		Kela
 };
 std::vector<Boss> sortedKpmeStrikeCMBosses {
 		CaptainMaiTrinCM, AnkkaCM, MinisterLiCM, VoidAmalgamateCM,
 		OldLionsCourtCM,
-		DagdaCM, CerusCM
+		DagdaCM, CerusCM,
+		KelaCM
 };
 
 std::string GetBossName(Boss boss) {
@@ -197,6 +201,10 @@ std::string GetBossName(Boss boss) {
 			return "Dagda";
 		case Cerus:
 			return "Cerus";
+		case Kela:
+			return "Kela";
+		case KelaToken:
+			return "Kela";
 		default:
 			return "Unknown";
 	}
@@ -342,6 +350,10 @@ Texture* GetBossTexture(Boss boss) {
 			return APIDefs->Textures.GetOrCreateFromResource("TEX_DAGDA", IDB_DAGDA, hSelf);
 		case Cerus:
 			return APIDefs->Textures.GetOrCreateFromResource("TEX_CERUS", IDB_CERUS, hSelf);
+		case Kela:
+			return APIDefs->Textures.GetOrCreateFromResource("TEX_KELA", IDB_KELA, hSelf);
+		case KelaToken:
+			return APIDefs->Textures.GetOrCreateFromResource("TEX_KELA", IDB_KELA, hSelf);
 		default:
 			return APIDefs->Textures.GetOrCreateFromResource("TEX_UNDER_CONSTRUCTION", IDB_UNDER_CONSTRUCTION, hSelf);
 	}

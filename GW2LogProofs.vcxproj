@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -25,7 +25,6 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\core\event_handlers.cpp" />
     <ClCompile Include="src\core\player_manager.cpp" />
-
     <ClCompile Include="src\core\settings.cpp" />
     <ClCompile Include="src\core\shared.cpp" />
     <ClCompile Include="src\core\tab_config.cpp" />
@@ -34,7 +33,6 @@
     <ClCompile Include="src\unofficial_extras\KeyBindsTranslation.cpp" />
     <ClCompile Include="src\providers\common\provider_registry.cpp" />
     <ClCompile Include="src\utils\httpclient.cpp" />
-
     <ClCompile Include="src\ui\gui_settings.cpp" />
     <ClCompile Include="src\providers\wingman\wingman_provider.cpp" />
     <ClCompile Include="src\providers\wingman\wingman_client.cpp" />
@@ -62,7 +60,6 @@
     <ClInclude Include="src\imgui\imstb_truetype.h" />
     <ClInclude Include="src\core\event_handlers.h" />
     <ClInclude Include="src\core\player_manager.h" />
-
     <ClInclude Include="src\nexus\Nexus.h" />
     <ClInclude Include="src\nlohmann\json.hpp" />
     <ClInclude Include="src\resource.h" />
@@ -70,7 +67,6 @@
     <ClInclude Include="src\core\shared.h" />
     <ClInclude Include="src\core\tab_config.h" />
     <ClInclude Include="src\core\lazy_load_manager.h" />
-
     <ClInclude Include="src\unofficial_extras\Definitions.h" />
     <ClInclude Include="src\unofficial_extras\KeyBindHelper.h" />
     <ClInclude Include="src\unofficial_extras\KeyBindsTranslation.h" />
@@ -79,7 +75,6 @@
     <ClInclude Include="src\providers\common\data_provider.h" />
     <ClInclude Include="src\providers\common\provider_registry.h" />
     <ClInclude Include="src\core\player_data.h" />
-
     <ClInclude Include="src\providers\wingman\wingman_provider.h" />
     <ClInclude Include="src\providers\wingman\wingman_client.h" />
     <ClInclude Include="src\providers\wingman\wingman_types.h" />
@@ -132,6 +127,7 @@
     <Image Include="resources\Icebrood_Construct.png" />
     <Image Include="resources\Kanaxai.png" />
     <Image Include="resources\Keep_Construct.png" />
+    <Image Include="resources\Kela.png" />
     <Image Include="resources\Kenutt.png" />
     <Image Include="resources\Kodans.png" />
     <Image Include="resources\Legendary_Divination.png" />
@@ -176,6 +172,7 @@
     <Image Include="src\resources\Cerus_And_Deimos.png" />
     <Image Include="src\resources\Conjured_Amalgamate.png" />
     <Image Include="src\resources\Dagda.png" />
+    <Image Include="src\resources\Decima.png" />
     <Image Include="src\resources\Deimos.png" />
     <Image Include="src\resources\Dhuum.png" />
     <Image Include="src\resources\Eater_Of_Souls.png" />
@@ -189,11 +186,14 @@
     <Image Include="src\resources\Fraenir_Of_Jormag.png" />
     <Image Include="src\resources\Freezie.png" />
     <Image Include="src\resources\Gorseval.png" />
+    <Image Include="src\resources\Greer.png" />
     <Image Include="src\resources\Harvest_Temple.png" />
     <Image Include="src\resources\Icebrood_Construct.png" />
     <Image Include="src\resources\Kanaxai.png" />
     <Image Include="src\resources\Keep_Construct.png" />
+    <Image Include="src\resources\Kela.png" />
     <Image Include="src\resources\Kenutt.png" />
+    <Image Include="src\resources\Kinfall.png" />
     <Image Include="src\resources\Kodans.png" />
     <Image Include="src\resources\Legendary_Divination.png" />
     <Image Include="src\resources\Legendary_Insight.png" />
@@ -218,6 +218,7 @@
     <Image Include="src\resources\Soulless_Horror.png" />
     <Image Include="src\resources\Twisted_Castle.png" />
     <Image Include="src\resources\Unstable_Fractal_Essence.png" />
+    <Image Include="src\resources\Ura.png" />
     <Image Include="src\resources\Vale_Guardian.png" />
     <Image Include="src\resources\Watchknight_Mark_II.png" />
     <Image Include="src\resources\Whisper_of_Jormag.png" />
@@ -282,26 +283,7 @@
       </ModuleDefinitionFile>
     </Link>
     <PreBuildEvent>
-      <Command>:: Check WMIC is available
-WMIC.EXE Alias /? &gt;NUL 2&gt;&amp;1 || GOTO s_error
-
-:: Use WMIC to retrieve date and time
-FOR /F "skip=1 tokens=1-6" %%G IN ('WMIC Path Win32_LocalTime Get Day^,Hour^,Minute^,Month^,Second^,Year /Format:table') DO (
-   IF "%%~L"=="" goto s_done
-      Set _yyyy=%%L
-      Set _mm=%%J
-      Set _dd=%%G
-      Set _hour=%%H
-      SET _minute=%%I
-)
-:s_done
-
-echo #pragma once &gt; src/version.h
-echo #define V_MAJOR %_yyyy% &gt;&gt; src/version.h
-echo #define V_MINOR %_mm% &gt;&gt; src/version.h
-echo #define V_BUILD %_dd% &gt;&gt; src/version.h
-SET /A var_res = %_hour% * 60 + %_minute%
-echo #define V_REVISION %var_res% &gt;&gt; src/version.h</Command>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)src\version.ps1"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -325,26 +307,7 @@ echo #define V_REVISION %var_res% &gt;&gt; src/version.h</Command>
       <EnableUAC>false</EnableUAC>
     </Link>
     <PreBuildEvent>
-      <Command>:: Check WMIC is available
-WMIC.EXE Alias /? &gt;NUL 2&gt;&amp;1 || GOTO s_error
-
-:: Use WMIC to retrieve date and time
-FOR /F "skip=1 tokens=1-6" %%G IN ('WMIC Path Win32_LocalTime Get Day^,Hour^,Minute^,Month^,Second^,Year /Format:table') DO (
-   IF "%%~L"=="" goto s_done
-      Set _yyyy=%%L
-      Set _mm=%%J
-      Set _dd=%%G
-      Set _hour=%%H
-      SET _minute=%%I
-)
-:s_done
-
-echo #pragma once &gt; src/version.h
-echo #define V_MAJOR %_yyyy% &gt;&gt; src/version.h
-echo #define V_MINOR %_mm% &gt;&gt; src/version.h
-echo #define V_BUILD %_dd% &gt;&gt; src/version.h
-SET /A var_res = %_hour% * 60 + %_minute%
-echo #define V_REVISION %var_res% &gt;&gt; src/version.h</Command>
+      <Command>powershell -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)src\version.ps1"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
