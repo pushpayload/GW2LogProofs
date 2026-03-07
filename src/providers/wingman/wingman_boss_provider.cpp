@@ -62,11 +62,8 @@ BossGroup WingmanBossProvider::CreateCustomBossGroup(const CustomTab& tab) const
 
 	for (const auto& proof : tab.proofs) {
 		int bossId = std::stoi(proof.proofId);
-		Boss boss = static_cast<Boss>(abs(bossId)); // Handle negative IDs for LCM
-		BossType type = BossType::NORMAL;
-		if (proof.bossType == "CM") type = BossType::CM;
-		else if (proof.bossType == "LCM" || bossId < 0)
-			type = BossType::LCM;
+		Boss boss = static_cast<Boss>(bossId);
+		BossType type = BossTypeFromString(proof.bossType);
 		bosses.push_back({boss, type});
 	}
 

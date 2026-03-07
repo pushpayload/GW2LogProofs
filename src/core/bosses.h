@@ -12,6 +12,8 @@ enum class BossType {
 	LCM
 };
 
+BossType BossTypeFromString(const std::string& s);
+
 enum class BossProofType {
 	KILL_PROOF,
 	TOKEN,

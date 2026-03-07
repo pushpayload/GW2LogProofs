@@ -168,10 +168,7 @@ BossGroup KpmeBossProvider::CreateCustomBossGroup(const CustomTab& tab) const {
 		} else {
 			// Find boss by proof identifier
 			bool found = false;
-			BossType type = BossType::NORMAL;
-			if (proof.bossType == "CM") type = BossType::CM;
-			else if (proof.bossType == "LCM")
-				type = BossType::LCM;
+			BossType type = BossTypeFromString(proof.bossType);
 
 			for (const auto& boss : {
 						 ValeGuardian,

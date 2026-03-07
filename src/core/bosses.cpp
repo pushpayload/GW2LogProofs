@@ -2,6 +2,12 @@
 #include "../resource.h"
 #include "shared.h"
 
+BossType BossTypeFromString(const std::string& s) {
+	if (s == "CM") return BossType::CM;
+	if (s == "LCM") return BossType::LCM;
+	return BossType::NORMAL;
+}
+
 std::vector<Boss> sortedRaidBosses {
 		ValeGuardian, Gorseval, Sabetha,
 		Slothasor, BanditTrio, Matthias,
