@@ -21,6 +21,7 @@
 #include "../providers/common/provider_registry.h"
 #include "../providers/wingman/wingman_client.h"
 #include "../providers/wingman/wingman_types.h"
+#include "../resource.h"
 
 
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -399,7 +400,21 @@ static void DrawTableHeaders(const BossGroup& group, bool showKpmeId, const std:
 	if (ShouldShowWingmanRankColumn(providerName)) {
 		ImGui::TableNextColumn();
 		HighlightColumnOnHover();
-		ImGui::Text("Rank");
+		Texture* texture = APIDefs->Textures.GetOrCreateFromResource("TEX_WINGMAN", IDB_WINGMAN, hSelf);
+		if (texture) {
+			float columnWidth = 90.0f;
+			float iconSize = Settings::BossIconScale;
+			float padding = (columnWidth - iconSize) * 0.5f;
+			if (padding > 0) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding);
+			ImGui::Image((void*) texture->Resource, ImVec2(iconSize, iconSize));
+		} else {
+			ImGui::Text("Rank");
+		}
+		if (ImGui::IsItemHovered()) {
+			ImGui::BeginTooltip();
+			ImGui::Text("Rank");
+			ImGui::EndTooltip();
+		}
 	}
 }
 
@@ -423,9 +438,12 @@ static void DrawWingmanRankCell(const Player& player, const BossGroup& group, co
 	}
 
 	if (!rankData->note.empty()) {
-		ImGui::TextDisabled("No rank");
+		const bool needsMoreData = !rankData->enoughData;
+		ImGui::TextDisabled(needsMoreData ? "Need data" : "No rank");
 		if (rankData->bossesCompleted > 0) {
 			ImGui::Text("%d bosses", rankData->bossesCompleted);
+		} else if (needsMoreData) {
+			ImGui::TextDisabled("< 10 bosses");
 		}
 
 		const bool canRerank = !rankData->enoughData;
@@ -475,7 +493,7 @@ static void DrawWingmanRankCell(const Player& player, const BossGroup& group, co
 			}
 			ImGui::PopID();
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
 			DrawWingmanRankTooltip(*rankData, group);
 		}
 		return;
