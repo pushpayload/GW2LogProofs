@@ -67,9 +67,15 @@ namespace {
 
 	static Wingman::WingmanClient wingmanClient;
 	static std::unordered_map<std::string, WingmanRerankState> wingmanRerankStates;
-	static std::unordered_set<std::string> wingmanExpandedPlayers;
+	static std::unordered_set<size_t> wingmanExpandedPlayers;
 	static std::mutex wingmanRerankMutex;
 	static const std::array<const char*, 5> wingmanRankCategories = {"Damage", "Mechanics", "Speed", "Support", "Teamplay"};
+
+	static size_t GetWingmanRowId(const BossGroup& group, const Player& player) {
+		size_t seed = std::hash<std::string> {}(group.tableName);
+		seed ^= std::hash<std::string> {}(player.account) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
 
 	static bool ShouldShowWingmanRankColumn(const std::string& providerName) {
 		return providerName == WINGMAN_PROVIDER_NAME && Settings::ShowWingmanRankEntity;
@@ -171,7 +177,7 @@ namespace {
 			ImGui::Separator();
 			ImGui::TextWrapped("%s", rankData.note.c_str());
 		}
-
+#ifdef _DEBUG
 		std::vector<std::string> hiddenBossKeys = GetWingmanHiddenBossKeysForGroup(&rankData, group);
 		if (!hiddenBossKeys.empty()) {
 			ImGui::Separator();
@@ -180,6 +186,7 @@ namespace {
 				ImGui::TextUnformatted(bossKey.c_str());
 			}
 		}
+#endif
 		ImGui::EndTooltip();
 	}
 
@@ -460,7 +467,9 @@ static void DrawWingmanRankCell(const Player& player, const BossGroup& group, co
 			const auto now = std::chrono::steady_clock::now();
 			const bool isCoolingDown = !rerankState.pending && rerankState.lastRequestTime != std::chrono::steady_clock::time_point {} && (now - rerankState.lastRequestTime) < WINGMAN_RERANK_COOLDOWN;
 
-			ImGui::PushID((group.tableName + player.account + "rerank").c_str());
+			ImGui::PushID(group.tableName.c_str());
+			ImGui::PushID(player.account.c_str());
+			ImGui::PushID("rerank");
 			const bool disableRerankButton = rerankState.pending || isCoolingDown;
 			if (disableRerankButton) {
 				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
@@ -491,6 +500,8 @@ static void DrawWingmanRankCell(const Player& player, const BossGroup& group, co
 				}
 				ImGui::EndTooltip();
 			}
+			ImGui::PopID();
+			ImGui::PopID();
 			ImGui::PopID();
 		}
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
@@ -580,7 +591,7 @@ static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider
 	const auto* proofData = computedData ? computedData.get() : rawProofData;
 	const auto* wingmanRankData = GetWingmanRankResponse(proofData);
 	const bool canExpandWingmanBreakdown = ShouldShowWingmanBreakdown(providerName) && HasWingmanBreakdownForGroup(wingmanRankData, group);
-	const std::string expansionKey = group.tableName + "|" + p.account;
+	const size_t expansionKey = GetWingmanRowId(group, p);
 	bool isWingmanExpanded = false;
 	const bool hasAnyDisplayData = proofData && (!proofData->proofs.empty() || (ShouldShowWingmanRankColumn(providerName) && HasWingmanRankDisplayData(proofData)));
 
@@ -594,7 +605,9 @@ static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider
 
 	ImGui::TableNextColumn();
 	if (canExpandWingmanBreakdown) {
-		ImGui::PushID(expansionKey.c_str());
+		ImGui::PushID(group.tableName.c_str());
+		ImGui::PushID(p.account.c_str());
+		ImGui::PushID("expand");
 		if (ImGui::SmallButton(isWingmanExpanded ? "-" : "+")) {
 			if (isWingmanExpanded) {
 				wingmanExpandedPlayers.erase(expansionKey);
@@ -604,6 +617,8 @@ static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider
 				isWingmanExpanded = true;
 			}
 		}
+		ImGui::PopID();
+		ImGui::PopID();
 		ImGui::PopID();
 		ImGui::SameLine();
 	}
