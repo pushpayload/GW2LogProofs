@@ -156,6 +156,7 @@
     <Image Include="resources\Vale_Guardian.png" />
     <Image Include="resources\Watchknight_Mark_II.png" />
     <Image Include="resources\Whisper_of_Jormag.png" />
+    <Image Include="resources\Wingman.png" />
     <Image Include="resources\Xera.png" />
     <Image Include="resources\Zane.png" />
     <Image Include="src\resources\Adina.png" />
@@ -222,6 +223,7 @@
     <Image Include="src\resources\Vale_Guardian.png" />
     <Image Include="src\resources\Watchknight_Mark_II.png" />
     <Image Include="src\resources\Whisper_of_Jormag.png" />
+    <Image Include="src\resources\Wingman.png" />
     <Image Include="src\resources\Xera.png" />
     <Image Include="src\resources\Zane.png" />
   </ItemGroup>

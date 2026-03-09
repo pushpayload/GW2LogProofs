@@ -27,6 +27,8 @@ const char* BOSS_ICON_SCALE = "BossIconScale";
 const char* SELECTED_DATA_SOURCE = "SelectedDataSource";
 const char* LINKED_ACCOUNTS_MODE = "LinkedAccountsMode";
 const char* INCLUDE_MISSING_ACCOUNTS = "IncludeMissingAccounts";
+const char* SHOW_WINGMAN_RANK_ENTITY = "ShowWingmanRankEntity";
+const char* SHOW_WINGMAN_RANK_BREAKDOWN = "ShowWingmanRankBreakdown";
 
 const char* HOVER_ENABLED = "HoverEnabled";
 const char* HOVER_COLOUR = "HoverColour";
@@ -106,6 +108,12 @@ namespace Settings {
 		if (!Settings[WINDOW_LOG_PROOFS_KEY][INCLUDE_MISSING_ACCOUNTS].is_null()) {
 			Settings[WINDOW_LOG_PROOFS_KEY][INCLUDE_MISSING_ACCOUNTS].get_to<bool>(IncludeMissingAccounts);
 		}
+		if (!Settings[WINDOW_LOG_PROOFS_KEY][SHOW_WINGMAN_RANK_ENTITY].is_null()) {
+			Settings[WINDOW_LOG_PROOFS_KEY][SHOW_WINGMAN_RANK_ENTITY].get_to<bool>(ShowWingmanRankEntity);
+		}
+		if (!Settings[WINDOW_LOG_PROOFS_KEY][SHOW_WINGMAN_RANK_BREAKDOWN].is_null()) {
+			Settings[WINDOW_LOG_PROOFS_KEY][SHOW_WINGMAN_RANK_BREAKDOWN].get_to<bool>(ShowWingmanRankBreakdown);
+		}
 
 		/* Hover settings */
 		if (!Settings[WINDOW_LOG_PROOFS_KEY][HOVER_ENABLED].is_null()) {
@@ -167,6 +175,8 @@ namespace Settings {
 	DataSource SelectedDataSource = WINGMAN;
 	LinkedAccountMode LinkedAccountsMode = HIDE_LINKED;
 	bool IncludeMissingAccounts = true;
+	bool ShowWingmanRankEntity = false;
+	bool ShowWingmanRankBreakdown = false;
 
 	bool hoverEnabled = true;
 	ImU32 hoverColour = 4285558896;

@@ -544,5 +544,11 @@
     <Image Include="src\resources\Decima.png">
       <Filter>resources</Filter>
     </Image>
+    <Image Include="src\resources\Wingman.png">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\Wingman.png">
+      <Filter>resources</Filter>
+    </Image>
   </ItemGroup>
 </Project>

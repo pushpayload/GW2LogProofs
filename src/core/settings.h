@@ -40,6 +40,8 @@ extern const char* BOSS_ICON_SCALE;
 extern const char* SELECTED_DATA_SOURCE;
 extern const char* LINKED_ACCOUNTS_MODE;
 extern const char* INCLUDE_MISSING_ACCOUNTS;
+extern const char* SHOW_WINGMAN_RANK_ENTITY;
+extern const char* SHOW_WINGMAN_RANK_BREAKDOWN;
 
 extern const char* HOVER_ENABLED;
 extern const char* HOVER_COLOUR;
@@ -76,6 +78,8 @@ namespace Settings {
 	extern DataSource SelectedDataSource;
 	extern LinkedAccountMode LinkedAccountsMode;
 	extern bool IncludeMissingAccounts;
+	extern bool ShowWingmanRankEntity;
+	extern bool ShowWingmanRankBreakdown;
 
 	extern bool hoverEnabled;
 	extern ImU32 hoverColour;

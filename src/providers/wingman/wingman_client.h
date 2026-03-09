@@ -9,6 +9,8 @@ namespace Wingman {
 	public:
 
 		void GetKpAsync(const std::string& account, std::function<void(const WingmanResponse&)> callback);
+		void GetPlayerRanksAsync(const std::string& account, std::function<void(const WingmanRankResponse&)> callback);
+		void RatePerformanceForCurrentPatchAsync(const std::string& account, std::function<void(const WingmanRankResponse&)> callback);
 	};
 } // namespace Wingman
 

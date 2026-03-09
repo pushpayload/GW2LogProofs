@@ -14,7 +14,7 @@ public:
 
 private:
 	Wingman::WingmanClient client_;
-	PlayerProofData ConvertWingmanResponse(const Wingman::WingmanResponse& response);
+	PlayerProofData ConvertWingmanResponse(const Wingman::WingmanPlayerData& response, const std::string& requestedAccount);
 };
 
 #endif

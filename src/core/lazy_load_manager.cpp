@@ -33,6 +33,11 @@ void ProofCache::SetEntry(const std::string& key, std::unique_ptr<PlayerProofDat
 	entry.permanentFailure = false;
 }
 
+void ProofCache::ClearEntry(const std::string& key) {
+	std::scoped_lock lock(cacheMutex);
+	cache.erase(key);
+}
+
 void ProofCache::MarkFailure(const std::string& key) {
 	std::scoped_lock lock(cacheMutex);
 	auto& entry = cache[key];
@@ -215,6 +220,14 @@ void LazyLoadManager::OnLoadComplete(const std::string& key, std::unique_ptr<Pla
 
 void LazyLoadManager::OnLoadFailed(const std::string& key) {
 	cache.MarkFailure(key);
+	std::scoped_lock lock(pendingMutex);
+	pendingLoads.erase(key);
+}
+
+void LazyLoadManager::ClearPlayerData(const std::string& account, const std::string& provider) {
+	std::string key = MakeKey(account, provider);
+	cache.ClearEntry(key);
+
 	std::scoped_lock lock(pendingMutex);
 	pendingLoads.erase(key);
 }
