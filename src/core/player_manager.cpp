@@ -74,4 +74,11 @@ namespace PlayerManager {
 			}
 		}
 	}
+
+	void Reset() {
+		std::scoped_lock lck(playerMutex);
+		players.clear();
+		selfAccountName.clear();
+		lazyLoadManager.Reset();
+	}
 } // namespace PlayerManager

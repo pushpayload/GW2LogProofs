@@ -38,6 +38,13 @@ void ProofCache::ClearEntry(const std::string& key) {
 	cache.erase(key);
 }
 
+void ProofCache::ClearAll() {
+	std::scoped_lock lock(cacheMutex);
+	cache.clear();
+	windowCurrentlyOpen = false;
+	windowLastClosed = std::chrono::steady_clock::time_point {};
+}
+
 void ProofCache::MarkFailure(const std::string& key) {
 	std::scoped_lock lock(cacheMutex);
 	auto& entry = cache[key];
@@ -245,4 +252,13 @@ void LazyLoadManager::ClearProviderCache(const std::string& provider) {
 			++it;
 		}
 	}
+}
+
+void LazyLoadManager::Reset() {
+	cache.ClearAll();
+
+	std::scoped_lock lock(pendingMutex);
+	pendingLoads.clear();
+	windowOpen = false;
+	loadFunction = nullptr;
 }

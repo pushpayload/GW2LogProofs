@@ -37,6 +37,7 @@ public:
 	std::unique_ptr<PlayerProofData> GetEntry(const std::string& key);
 	void SetEntry(const std::string& key, std::unique_ptr<PlayerProofData> data);
 	void ClearEntry(const std::string& key);
+	void ClearAll();
 	void MarkFailure(const std::string& key);
 	bool ShouldRetry(const std::string& key);
 	std::vector<std::string> CleanExpiredEntries();
@@ -69,6 +70,7 @@ public:
 	void OnLoadFailed(const std::string& key);
 	void ClearPlayerData(const std::string& account, const std::string& provider);
 	void ClearProviderCache(const std::string& provider);
+	void Reset();
 
 private:
 	std::string MakeKey(const std::string& account, const std::string& provider);

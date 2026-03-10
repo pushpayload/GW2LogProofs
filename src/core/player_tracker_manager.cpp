@@ -95,6 +95,7 @@ void PlayerTrackerManager::Shutdown() {
 	for (const auto& tracker : trackers) {
 		tracker->Shutdown();
 	}
+	trackers.clear();
 	activeTracker = nullptr;
 	instance = nullptr;
 }

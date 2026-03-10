@@ -319,13 +319,13 @@ static void DrawSpinner() {
 	window->DrawList->PathStroke(color, false, (float) thickness);
 }
 
-static void DrawPlayerAccountName(const Player& player, const PlayerProofData* proofData) {
+static void DrawPlayerAccountName(const std::string& account, const PlayerProofData* proofData) {
 	if (proofData && !proofData->profileUrl.empty()) {
-		if (ImGui::TextURL(player.account.c_str())) {
+		if (ImGui::TextURL(account.c_str())) {
 			ShellExecuteA(0, 0, proofData->profileUrl.c_str(), 0, 0, SW_SHOW);
 		}
 	} else {
-		ImGui::Text(player.account.c_str());
+		ImGui::Text(account.c_str());
 	}
 }
 
@@ -342,7 +342,7 @@ static void DrawPlayerProofValue(const Player& player, const std::string& proofI
 	}
 }
 
-static void DrawKpmeId(const Player& aPlayer, const PlayerProofData* proofData) {
+static void DrawKpmeId(const PlayerProofData* proofData) {
 	if (proofData && !proofData->profileId.empty()) {
 		if (ImGui::TextURL(proofData->profileId.c_str())) {
 			ImGui::SetClipboardText(proofData->profileId.c_str());
@@ -399,7 +399,7 @@ static void SetupTableColumns(const BossGroup& group, bool showKpmeId, const std
 		columnSpecs.emplace_back(it->second, Settings::ColumnSizeBosses);
 	}
 	if (ShouldShowWingmanRankColumn(providerName)) {
-		columnSpecs.emplace_back("Rank", 90.0f);
+		columnSpecs.emplace_back("Rank", GetWingmanRankColumnWidth());
 	}
 
 
@@ -471,7 +471,7 @@ static void DrawTableHeaders(const BossGroup& group, bool showKpmeId, const std:
 		HighlightColumnOnHover();
 		Texture* texture = APIDefs->Textures.GetOrCreateFromResource("TEX_WINGMAN", IDB_WINGMAN, hSelf);
 		if (texture) {
-			float columnWidth = 90.0f;
+			float columnWidth = GetWingmanRankColumnWidth();
 			float iconSize = Settings::BossIconScale;
 			float padding = (columnWidth - iconSize) * 0.5f;
 			if (padding > 0) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padding);
@@ -487,7 +487,7 @@ static void DrawTableHeaders(const BossGroup& group, bool showKpmeId, const std:
 	}
 }
 
-static void DrawWingmanRankCell(const Player& player, const BossGroup& group, const PlayerProofData* proofData, LoadState lazyState) {
+static void DrawWingmanRankCell(const std::string& account, const BossGroup& group, const PlayerProofData* proofData, LoadState lazyState) {
 	const auto* rankData = GetWingmanRankResponse(proofData);
 	if (!rankData) {
 		if (lazyState == LoadState::LOADING) {
@@ -508,64 +508,7 @@ static void DrawWingmanRankCell(const Player& player, const BossGroup& group, co
 
 	if (!rankData->note.empty()) {
 		const bool needsMoreData = !rankData->enoughData;
-		ImGui::TextDisabled(needsMoreData ? "Need data" : "No rank");
-		if (rankData->bossesCompleted > 0) {
-			ImGui::Text("%d bosses", rankData->bossesCompleted);
-		} else if (needsMoreData) {
-			ImGui::TextDisabled("< 10 bosses");
-		}
-
-		const bool canRerank = !rankData->enoughData;
-		if (canRerank) {
-			WingmanRerankState rerankState;
-			{
-				std::scoped_lock lock(wingmanRerankMutex);
-				auto it = wingmanRerankStates.find(player.account);
-				if (it != wingmanRerankStates.end()) {
-					rerankState = it->second;
-				}
-			}
-
-			const auto now = std::chrono::steady_clock::now();
-			const bool isCoolingDown = !rerankState.pending && rerankState.lastRequestTime != std::chrono::steady_clock::time_point {} && (now - rerankState.lastRequestTime) < WINGMAN_RERANK_COOLDOWN;
-
-			ImGui::PushID(group.tableName.c_str());
-			ImGui::PushID(player.account.c_str());
-			ImGui::PushID("rerank");
-			const bool disableRerankButton = rerankState.pending || isCoolingDown;
-			if (disableRerankButton) {
-				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-			}
-			if (ImGui::SmallButton("Rerank")) {
-				TriggerWingmanRerank(player.account);
-			}
-			if (disableRerankButton) {
-				ImGui::PopStyleVar();
-				ImGui::PopItemFlag();
-			}
-			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-				ImGui::BeginTooltip();
-				if (rerankState.pending) {
-					ImGui::Text("Rerank in progress.");
-				} else if (isCoolingDown) {
-					auto remaining = std::chrono::duration_cast<std::chrono::minutes>(WINGMAN_RERANK_COOLDOWN - (now - rerankState.lastRequestTime)).count();
-					ImGui::Text("Cooldown active: %lld minute(s) remaining.", remaining + 1);
-				} else if (!rerankState.lastNote.empty()) {
-					ImGui::TextWrapped("%s", rerankState.lastNote.c_str());
-				} else {
-					ImGui::Text("Ask Wingman to calculate ranks for this player.");
-				}
-				if (!rankData->note.empty()) {
-					ImGui::Separator();
-					ImGui::TextWrapped("%s", rankData->note.c_str());
-				}
-				ImGui::EndTooltip();
-			}
-			ImGui::PopID();
-			ImGui::PopID();
-			ImGui::PopID();
-		}
+		ImGui::TextDisabled(needsMoreData ? "Need" : "None");
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
 			DrawWingmanRankTooltip(*rankData, group);
 		}
@@ -632,13 +575,13 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 	}
 }
 
-static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider* provider, bool showKpmeId, const std::string& providerName) {
+static void DrawPlayerRow(const std::string& account, const BossGroup& group, IBossProvider* provider, bool showKpmeId, const std::string& providerName) {
 
 	group.InitializeCache(provider);
 
 
-	auto lazyState = PlayerManager::lazyLoadManager.GetPlayerState(p.account, providerName);
-	auto lazyData = PlayerManager::lazyLoadManager.GetPlayerData(p.account, providerName);
+	auto lazyState = PlayerManager::lazyLoadManager.GetPlayerState(account, providerName);
+	auto lazyData = PlayerManager::lazyLoadManager.GetPlayerData(account, providerName);
 	const auto* rawProofData = (lazyState == LoadState::READY && lazyData) ? lazyData.get() : nullptr;
 
 
@@ -653,7 +596,7 @@ static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider
 	const auto* proofData = computedData ? computedData.get() : rawProofData;
 	const auto* wingmanRankData = GetWingmanRankResponse(proofData);
 	const bool canExpandWingmanBreakdown = ShouldShowWingmanBreakdown(providerName) && HasWingmanBreakdownForGroup(wingmanRankData, group);
-	const size_t expansionKey = GetWingmanRowId(group, p);
+	const size_t expansionKey = GetWingmanRowId(group, account);
 	bool isWingmanExpanded = false;
 	const bool hasAnyDisplayData = proofData && (!proofData->proofs.empty() || (ShouldShowWingmanRankColumn(providerName) && HasWingmanRankDisplayData(proofData)));
 
@@ -668,7 +611,7 @@ static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider
 	ImGui::TableNextColumn();
 	if (canExpandWingmanBreakdown) {
 		ImGui::PushID(group.tableName.c_str());
-		ImGui::PushID(p.account.c_str());
+		ImGui::PushID(account.c_str());
 		ImGui::PushID("expand");
 		if (ImGui::SmallButton(isWingmanExpanded ? "-" : "+")) {
 			if (isWingmanExpanded) {
@@ -684,11 +627,14 @@ static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider
 		ImGui::PopID();
 		ImGui::SameLine();
 	}
-	DrawPlayerAccountName(p, proofData);
+	DrawPlayerAccountName(account, proofData);
+	if (ShouldShowWingmanRankColumn(providerName)) {
+		DrawWingmanRerankButton(account, group, wingmanRankData);
+	}
 	if (showKpmeId) {
 		ImGui::TableNextColumn();
 		HighlightColumnOnHover();
-		DrawKpmeId(p, proofData);
+		DrawKpmeId(proofData);
 	}
 
 	bool isDisabled = !hasAnyDisplayData;
@@ -724,7 +670,7 @@ static void DrawPlayerRow(const Player& p, const BossGroup& group, IBossProvider
 	if (ShouldShowWingmanRankColumn(providerName)) {
 		ImGui::TableNextColumn();
 		HighlightColumnOnHover();
-		DrawWingmanRankCell(p, group, proofData, lazyState);
+		DrawWingmanRankCell(account, group, proofData, lazyState);
 	}
 
 	if (!hasAnyDisplayData) {
@@ -781,8 +727,8 @@ static void DrawGenericTab(const BossGroup& group, IBossProvider* provider, cons
 		SetupTableColumns(group, showKpmeId, providerName);
 		DrawTableHeaders(group, showKpmeId, providerName);
 
-		static std::vector<const Player*> visiblePlayers;
-		visiblePlayers.clear();
+		static std::vector<std::string> visibleAccounts;
+		visibleAccounts.clear();
 
 		{
 			std::scoped_lock lck(PlayerManager::playerMutex);
@@ -806,13 +752,13 @@ static void DrawGenericTab(const BossGroup& group, IBossProvider* provider, cons
 						}
 					}
 				}
-				visiblePlayers.push_back(&p);
+				visibleAccounts.push_back(p.account);
 			}
 		}
 
 
-		for (const auto* player : visiblePlayers) {
-			DrawPlayerRow(*player, group, provider, showKpmeId, providerName);
+		for (const auto& account : visibleAccounts) {
+			DrawPlayerRow(account, group, provider, showKpmeId, providerName);
 		}
 		ImGui::EndTable();
 	}

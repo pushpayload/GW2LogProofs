@@ -71,6 +71,7 @@ void AddonLoad(AddonAPI* addonApi) {
 	SettingsPath = APIDefs->Paths.GetAddonDirectory("log_proofs/settings.json");
 	std::filesystem::create_directory(AddonPath);
 	Settings::Load(SettingsPath);
+	PlayerManager::Reset();
 
 	APIDefs->Textures.GetOrCreateFromResource("TEX_LOG_NORMAL", IDB_LOG_NORMAL, hSelf);
 	APIDefs->Textures.GetOrCreateFromResource("TEX_LOG_HOVER", IDB_LOG_HOVER, hSelf);
@@ -101,6 +102,7 @@ void AddonLoad(AddonAPI* addonApi) {
 }
 
 void AddonUnload() {
+	PlayerManager::Reset();
 	APIDefs->UI.DeregisterCloseOnEscape("Log Proofs");
 
 	APIDefs->Renderer.Deregister(AddonOptions);
