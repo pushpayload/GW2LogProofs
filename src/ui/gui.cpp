@@ -72,6 +72,7 @@ namespace {
 	static const std::array<const char*, 5> wingmanRankCategories = {"Damage", "Mechanics", "Speed", "Support", "Teamplay"};
 
 	static void TriggerWingmanRerank(const std::string& account);
+	static bool ShouldShowWingmanRankColumn(const std::string& providerName);
 
 	static size_t GetWingmanRowId(const BossGroup& group, const std::string& account) {
 		size_t seed = std::hash<std::string> {}(group.tableName);
@@ -81,6 +82,18 @@ namespace {
 
 	static float GetWingmanRankColumnWidth() {
 		return (std::max)(Settings::ColumnSizeBosses, 44.0f);
+	}
+
+	static float GetWingmanTooltipWrapWidth() {
+		return 320.0f;
+	}
+
+	static float GetAccountColumnWidth(const std::string& providerName) {
+		float width = Settings::ColumnSizeAccount;
+		if (ShouldShowWingmanRankColumn(providerName)) {
+			width += 70.0f;
+		}
+		return width;
 	}
 
 	static bool ShouldShowWingmanRankColumn(const std::string& providerName) {
@@ -181,7 +194,9 @@ namespace {
 		}
 		if (!rankData.note.empty()) {
 			ImGui::Separator();
+			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + GetWingmanTooltipWrapWidth());
 			ImGui::TextWrapped("%s", rankData.note.c_str());
+			ImGui::PopTextWrapPos();
 		}
 #ifdef _DEBUG
 		std::vector<std::string> hiddenBossKeys = GetWingmanHiddenBossKeysForGroup(&rankData, group);
@@ -197,9 +212,14 @@ namespace {
 	}
 
 	static void DrawWingmanRerankButton(const std::string& account, const BossGroup& group, const Wingman::WingmanRankResponse* rankData) {
-		if (!rankData || rankData->enoughData) {
+		if (!rankData) {
 			return;
 		}
+#ifndef _DEBUG
+		if (rankData->enoughData) {
+			return;
+		}
+#endif
 
 		WingmanRerankState rerankState;
 		{
@@ -237,13 +257,17 @@ namespace {
 				auto remaining = std::chrono::duration_cast<std::chrono::minutes>(WINGMAN_RERANK_COOLDOWN - (now - rerankState.lastRequestTime)).count();
 				ImGui::Text("Cooldown active: %lld minute(s) remaining.", remaining + 1);
 			} else if (!rerankState.lastNote.empty()) {
+				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + GetWingmanTooltipWrapWidth());
 				ImGui::TextWrapped("%s", rerankState.lastNote.c_str());
+				ImGui::PopTextWrapPos();
 			} else {
 				ImGui::Text("Ask Wingman to calculate ranks for this player.");
 			}
 			if (!rankData->note.empty()) {
 				ImGui::Separator();
+				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + GetWingmanTooltipWrapWidth());
 				ImGui::TextWrapped("%s", rankData->note.c_str());
+				ImGui::PopTextWrapPos();
 			}
 			ImGui::EndTooltip();
 		}
@@ -382,7 +406,7 @@ static void SetupTableColumns(const BossGroup& group, bool showKpmeId, const std
 	static std::vector<std::pair<std::string, float>> columnSpecs;
 	columnSpecs.clear();
 
-	columnSpecs.emplace_back("Account", Settings::ColumnSizeAccount);
+	columnSpecs.emplace_back("Account", GetAccountColumnWidth(providerName));
 	if (showKpmeId) {
 		columnSpecs.emplace_back("Id", Settings::ColumnSizeKpmeId);
 	}
@@ -507,8 +531,13 @@ static void DrawWingmanRankCell(const std::string& account, const BossGroup& gro
 	}
 
 	if (!rankData->note.empty()) {
-		const bool needsMoreData = !rankData->enoughData;
-		ImGui::TextDisabled(needsMoreData ? "Need" : "None");
+		if (!rankData->success) {
+			ImGui::TextDisabled("Unranked");
+		} else if (!rankData->enoughData) {
+			ImGui::TextDisabled("Need");
+		} else {
+			ImGui::TextDisabled("None");
+		}
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
 			DrawWingmanRankTooltip(*rankData, group);
 		}
