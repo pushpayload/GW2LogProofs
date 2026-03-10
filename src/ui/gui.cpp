@@ -71,10 +71,16 @@ namespace {
 	static std::mutex wingmanRerankMutex;
 	static const std::array<const char*, 5> wingmanRankCategories = {"Damage", "Mechanics", "Speed", "Support", "Teamplay"};
 
-	static size_t GetWingmanRowId(const BossGroup& group, const Player& player) {
+	static void TriggerWingmanRerank(const std::string& account);
+
+	static size_t GetWingmanRowId(const BossGroup& group, const std::string& account) {
 		size_t seed = std::hash<std::string> {}(group.tableName);
-		seed ^= std::hash<std::string> {}(player.account) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= std::hash<std::string> {}(account) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 		return seed;
+	}
+
+	static float GetWingmanRankColumnWidth() {
+		return (std::max)(Settings::ColumnSizeBosses, 44.0f);
 	}
 
 	static bool ShouldShowWingmanRankColumn(const std::string& providerName) {
@@ -188,6 +194,62 @@ namespace {
 		}
 #endif
 		ImGui::EndTooltip();
+	}
+
+	static void DrawWingmanRerankButton(const std::string& account, const BossGroup& group, const Wingman::WingmanRankResponse* rankData) {
+		if (!rankData || rankData->enoughData) {
+			return;
+		}
+
+		WingmanRerankState rerankState;
+		{
+			std::scoped_lock lock(wingmanRerankMutex);
+			auto it = wingmanRerankStates.find(account);
+			if (it != wingmanRerankStates.end()) {
+				rerankState = it->second;
+			}
+		}
+
+		const auto now = std::chrono::steady_clock::now();
+		const bool isCoolingDown = !rerankState.pending && rerankState.lastRequestTime != std::chrono::steady_clock::time_point {} && (now - rerankState.lastRequestTime) < WINGMAN_RERANK_COOLDOWN;
+
+		ImGui::SameLine();
+		ImGui::PushID(group.tableName.c_str());
+		ImGui::PushID(account.c_str());
+		ImGui::PushID("rerank");
+		const bool disableRerankButton = rerankState.pending || isCoolingDown;
+		if (disableRerankButton) {
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+		}
+		if (ImGui::SmallButton("Rerank")) {
+			TriggerWingmanRerank(account);
+		}
+		if (disableRerankButton) {
+			ImGui::PopStyleVar();
+			ImGui::PopItemFlag();
+		}
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+			ImGui::BeginTooltip();
+			if (rerankState.pending) {
+				ImGui::Text("Rerank in progress.");
+			} else if (isCoolingDown) {
+				auto remaining = std::chrono::duration_cast<std::chrono::minutes>(WINGMAN_RERANK_COOLDOWN - (now - rerankState.lastRequestTime)).count();
+				ImGui::Text("Cooldown active: %lld minute(s) remaining.", remaining + 1);
+			} else if (!rerankState.lastNote.empty()) {
+				ImGui::TextWrapped("%s", rerankState.lastNote.c_str());
+			} else {
+				ImGui::Text("Ask Wingman to calculate ranks for this player.");
+			}
+			if (!rankData->note.empty()) {
+				ImGui::Separator();
+				ImGui::TextWrapped("%s", rankData->note.c_str());
+			}
+			ImGui::EndTooltip();
+		}
+		ImGui::PopID();
+		ImGui::PopID();
+		ImGui::PopID();
 	}
 
 	static void TriggerWingmanRerank(const std::string& account) {
