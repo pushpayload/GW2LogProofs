@@ -122,14 +122,20 @@ namespace {
 		ImGui::TextColored(GetWingmanRankLetterColor(rank), "%s", rank.c_str());
 	}
 
-	static void DrawWingmanRankPair(const std::string& globalRank, const std::string& tabRank) {
+	static void DrawWingmanRankParts(const std::string& firstRank, const std::string& secondRank, const std::string& thirdRank = {}) {
 		ImGui::BeginGroup();
-		DrawWingmanRankLetter(globalRank);
-		if (!tabRank.empty()) {
+		DrawWingmanRankLetter(firstRank);
+		if (!secondRank.empty()) {
 			ImGui::SameLine(0.0f, 0.0f);
 			ImGui::TextUnformatted("/");
 			ImGui::SameLine(0.0f, 0.0f);
-			DrawWingmanRankLetter(tabRank);
+			DrawWingmanRankLetter(secondRank);
+		}
+		if (!thirdRank.empty()) {
+			ImGui::SameLine(0.0f, 0.0f);
+			ImGui::TextUnformatted("/");
+			ImGui::SameLine(0.0f, 0.0f);
+			DrawWingmanRankLetter(thirdRank);
 		}
 		ImGui::EndGroup();
 	}
@@ -211,9 +217,12 @@ namespace {
 		return weightedSum / totalWeight;
 	}
 
-	static std::optional<double> CalculateWingmanBossOverallNumeric(const std::map<std::string, std::string>& categoryRanks) {
+	static std::optional<double> CalculateWingmanBossOverallNumeric(
+		const std::map<std::string, std::string>& categoryRanks,
+		bool allowIgnoreOptional = true
+	) {
 		const auto fullAverage = CalculateWingmanBossOverallNumericExcluding(categoryRanks, false);
-		if (!Settings::WeighWingmanMechanicsTeamplayLess) {
+		if (!allowIgnoreOptional || !Settings::WeighWingmanMechanicsTeamplayLess) {
 			return fullAverage;
 		}
 
@@ -237,8 +246,32 @@ namespace {
 		return GetWingmanRankLetterFromNumeric(*numeric);
 	}
 
-	// Tab rank: average of up to 10 best per-boss overall ranks in the current boss group.
-	static std::string CalculateWingmanTabRank(const Wingman::WingmanRankResponse& rankData, const BossGroup& group, int* outUsedCount = nullptr, int* outAvailableCount = nullptr) {
+	static std::string CalculateWingmanAggregateRank(const std::vector<double>& sortedBossNumerics, size_t maxBosses, int* outUsedCount = nullptr) {
+		if (sortedBossNumerics.empty()) {
+			if (outUsedCount) {
+				*outUsedCount = 0;
+			}
+			return {};
+		}
+
+		const size_t usedCount = (std::min)(sortedBossNumerics.size(), maxBosses);
+		double sum = 0.0;
+		for (size_t i = 0; i < usedCount; ++i) {
+			sum += sortedBossNumerics[i];
+		}
+
+		if (outUsedCount) {
+			*outUsedCount = static_cast<int>(usedCount);
+		}
+
+		return GetWingmanRankLetterFromNumeric(sum / static_cast<double>(usedCount));
+	}
+
+	static std::vector<double> CollectWingmanBossOverallNumerics(
+		const Wingman::WingmanRankResponse& rankData,
+		const BossGroup& group,
+		bool allowIgnoreOptional
+	) {
 		std::vector<double> bossNumerics;
 		bossNumerics.reserve(group.cachedBossIds.size());
 
@@ -248,36 +281,71 @@ namespace {
 				continue;
 			}
 
-			auto numeric = CalculateWingmanBossOverallNumeric(bossIt->second);
+			auto numeric = CalculateWingmanBossOverallNumeric(bossIt->second, allowIgnoreOptional);
 			if (!numeric) {
 				continue;
 			}
 			bossNumerics.push_back(*numeric);
 		}
 
-		if (outAvailableCount) {
-			*outAvailableCount = static_cast<int>(bossNumerics.size());
-		}
+		std::sort(bossNumerics.begin(), bossNumerics.end());
+		return bossNumerics;
+	}
 
-		if (bossNumerics.empty()) {
-			if (outUsedCount) {
-				*outUsedCount = 0;
+	static std::vector<double> CollectWingmanCategoryNumerics(
+		const Wingman::WingmanRankResponse& rankData,
+		const BossGroup& group,
+		const char* category
+	) {
+		std::vector<double> bossNumerics;
+		bossNumerics.reserve(group.cachedBossIds.size());
+
+		for (const auto& bossId : group.cachedBossIds) {
+			auto bossIt = rankData.bestPerBoss.find(bossId);
+			if (bossIt == rankData.bestPerBoss.end()) {
+				continue;
 			}
-			return {};
+
+			auto categoryIt = bossIt->second.find(category);
+			if (categoryIt == bossIt->second.end() || categoryIt->second.empty()) {
+				continue;
+			}
+
+			auto numeric = GetWingmanRankNumeric(categoryIt->second);
+			if (!numeric) {
+				continue;
+			}
+			bossNumerics.push_back(static_cast<double>(*numeric));
 		}
 
 		std::sort(bossNumerics.begin(), bossNumerics.end());
-		const size_t usedCount = (std::min)(bossNumerics.size(), size_t {10});
-		double sum = 0.0;
-		for (size_t i = 0; i < usedCount; ++i) {
-			sum += bossNumerics[i];
+		return bossNumerics;
+	}
+
+	static void DrawWingmanTop10AndAllRank(const std::vector<double>& sortedBossNumerics) {
+		if (sortedBossNumerics.empty()) {
+			ImGui::Text("");
+			return;
 		}
 
-		if (outUsedCount) {
-			*outUsedCount = static_cast<int>(usedCount);
-		}
+		const std::string top10Rank = CalculateWingmanAggregateRank(sortedBossNumerics, 10);
+		const std::string allRank = CalculateWingmanAggregateRank(sortedBossNumerics, sortedBossNumerics.size());
+		DrawWingmanRankParts(top10Rank, allRank);
+	}
 
-		return GetWingmanRankLetterFromNumeric(sum / static_cast<double>(usedCount));
+	// Tab rank: average of up to 10 best per-boss overall ranks in the current boss group.
+	static std::string CalculateWingmanTabRank(
+		const Wingman::WingmanRankResponse& rankData,
+		const BossGroup& group,
+		int* outUsedCount = nullptr,
+		int* outAvailableCount = nullptr,
+		bool allowIgnoreOptional = true
+	) {
+		const std::vector<double> bossNumerics = CollectWingmanBossOverallNumerics(rankData, group, allowIgnoreOptional);
+		if (outAvailableCount) {
+			*outAvailableCount = static_cast<int>(bossNumerics.size());
+		}
+		return CalculateWingmanAggregateRank(bossNumerics, 10, outUsedCount);
 	}
 
 	// Highest rank = best letter (lowest numeric on Wingman's scale).
@@ -378,36 +446,8 @@ namespace {
 		return true;
 	}
 
-	static bool HasWingmanBreakdownForGroup(const Wingman::WingmanRankResponse* rankData, const BossGroup& group) {
-		if (!rankData) {
-			return false;
-		}
-
-		for (const auto& bossId : group.cachedBossIds) {
-			if (rankData->bestPerBoss.find(bossId) != rankData->bestPerBoss.end()) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	static bool HasWingmanCategoryForGroup(const Wingman::WingmanRankResponse* rankData, const BossGroup& group, const char* category) {
-		if (!rankData) {
-			return false;
-		}
-
-		for (const auto& bossId : group.cachedBossIds) {
-			auto bossIt = rankData->bestPerBoss.find(bossId);
-			if (bossIt != rankData->bestPerBoss.end()) {
-				auto categoryIt = bossIt->second.find(category);
-				if (categoryIt != bossIt->second.end() && !categoryIt->second.empty()) {
-					return true;
-				}
-			}
-		}
-
-		return false;
+	static bool CanShowWingmanBreakdown(const PlayerProofData* proofData) {
+		return HasWingmanRankDisplayData(proofData);
 	}
 
 	static std::vector<std::string> GetWingmanHiddenBossKeysForGroup(const Wingman::WingmanRankResponse* rankData, const BossGroup& group) {
@@ -463,7 +503,14 @@ namespace {
 		ImGui::EndTooltip();
 	}
 
-	static void DrawWingmanRankTooltip(const Wingman::WingmanRankResponse& rankData, const BossGroup& group, const std::string& tabRank = {}, int tabUsedCount = 0, int tabAvailableCount = 0) {
+	static void DrawWingmanRankTooltip(
+		const Wingman::WingmanRankResponse& rankData,
+		const BossGroup& group,
+		const std::string& top10Rank = {},
+		int top10UsedCount = 0,
+		int availableCount = 0,
+		const std::string& allRank = {}
+	) {
 		ImGui::BeginTooltip();
 		if (!rankData.era.empty()) {
 			ImGui::Text("Era: %s", rankData.era.c_str());
@@ -471,10 +518,15 @@ namespace {
 		if (!rankData.globalRank.empty()) {
 			DrawWingmanLabeledRank("Global Rank", rankData.globalRank);
 		}
-		if (!tabRank.empty()) {
-			const std::string tabLabel = group.name.empty() ? "Tab Rank" : (group.name + " Rank");
-			DrawWingmanLabeledRank(tabLabel.c_str(), tabRank);
-			ImGui::TextDisabled("Top %d of %d bosses in this tab", tabUsedCount, tabAvailableCount);
+		if (!top10Rank.empty()) {
+			const std::string top10Label = group.name.empty() ? "Top 10 Rank" : (group.name + " Top 10");
+			DrawWingmanLabeledRank(top10Label.c_str(), top10Rank);
+			ImGui::TextDisabled("Best %d of %d bosses in this tab", top10UsedCount, availableCount);
+		}
+		if (!allRank.empty()) {
+			const std::string allLabel = group.name.empty() ? "All Rank" : (group.name + " All");
+			DrawWingmanLabeledRank(allLabel.c_str(), allRank);
+			ImGui::TextDisabled("Average of all %d bosses in this tab", availableCount);
 		}
 		if (rankData.bossesCompleted > 0) {
 			ImGui::Text("Bosses Completed: %d", rankData.bossesCompleted);
@@ -851,12 +903,12 @@ static void DrawWingmanRankCell(const std::string& account, const BossGroup& gro
 	}
 
 	if (rankData->success && rankData->enoughData && !rankData->globalRank.empty()) {
-		int tabUsedCount = 0;
-		int tabAvailableCount = 0;
-		const std::string tabRank = CalculateWingmanTabRank(*rankData, group, &tabUsedCount, &tabAvailableCount);
-		DrawWingmanRankPair(rankData->globalRank, tabRank);
+		int top10UsedCount = 0;
+		int availableCount = 0;
+		const std::string top10Rank = CalculateWingmanTabRank(*rankData, group, &top10UsedCount, &availableCount, true);
+		DrawWingmanRankParts(rankData->globalRank, top10Rank);
 		if (ImGui::IsItemHovered()) {
-			DrawWingmanRankTooltip(*rankData, group, tabRank, tabUsedCount, tabAvailableCount);
+			DrawWingmanRankTooltip(*rankData, group, top10Rank, top10UsedCount, availableCount);
 		}
 		return;
 	}
@@ -884,7 +936,7 @@ static void DrawWingmanRankCell(const std::string& account, const BossGroup& gro
 
 static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, const PlayerProofData* proofData) {
 	const auto* rankData = GetWingmanRankResponse(proofData);
-	if (!rankData || !HasWingmanBreakdownForGroup(rankData, group)) {
+	if (!rankData) {
 		return;
 	}
 
@@ -914,11 +966,12 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 			}
 
 			if (isOverall) {
-				std::string overallRank = CalculateWingmanBossOverallRank(bossIt->second);
-				if (overallRank.empty()) {
+				// Per-boss Overall in breakdown never ignores Mechanics/Teamplay.
+				auto numeric = CalculateWingmanBossOverallNumeric(bossIt->second, false);
+				if (!numeric) {
 					ImGui::Text("");
 				} else {
-					DrawWingmanRankLetter(overallRank);
+					DrawWingmanRankLetter(GetWingmanRankLetterFromNumeric(*numeric));
 				}
 				continue;
 			}
@@ -934,7 +987,31 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 
 		if (ShouldShowWingmanRankColumn(WINGMAN_PROVIDER_NAME)) {
 			ImGui::TableNextColumn();
-			ImGui::Text("");
+			// Top 10 / all for this row — full categories, no Mechanics/Teamplay ignore.
+			if (isOverall) {
+				const std::vector<double> bossNumerics = CollectWingmanBossOverallNumerics(*rankData, group, false);
+				if (!bossNumerics.empty()) {
+					DrawWingmanTop10AndAllRank(bossNumerics);
+				} else if (!rankData->globalRank.empty()) {
+					// No per-boss data on this tab — still surface the API overall.
+					DrawWingmanRankLetter(rankData->globalRank);
+				} else {
+					ImGui::Text("");
+				}
+			} else {
+				const std::vector<double> bossNumerics = CollectWingmanCategoryNumerics(*rankData, group, label);
+				if (!bossNumerics.empty()) {
+					DrawWingmanTop10AndAllRank(bossNumerics);
+				} else {
+					auto categoryIt = rankData->ranksByCategory.find(label);
+					if (categoryIt != rankData->ranksByCategory.end() && !categoryIt->second.empty()) {
+						// No per-boss data on this tab — still surface the API category rank.
+						DrawWingmanRankLetter(categoryIt->second);
+					} else {
+						ImGui::Text("");
+					}
+				}
+			}
 		}
 
 		HighlightRowOnHover(ImGui::GetCurrentContext()->CurrentTable);
@@ -943,9 +1020,6 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 	drawBreakdownRow("Overall", true);
 
 	for (const char* category : wingmanRankCategories) {
-		if (!HasWingmanCategoryForGroup(rankData, group, category)) {
-			continue;
-		}
 		drawBreakdownRow(category, false);
 	}
 }
@@ -970,7 +1044,7 @@ static void DrawPlayerRow(const std::string& account, const BossGroup& group, IB
 	}
 	const auto* proofData = computedData ? computedData.get() : rawProofData;
 	const auto* wingmanRankData = GetWingmanRankResponse(proofData);
-	const bool canExpandWingmanBreakdown = ShouldShowWingmanBreakdown(providerName) && HasWingmanBreakdownForGroup(wingmanRankData, group);
+	const bool canExpandWingmanBreakdown = ShouldShowWingmanBreakdown(providerName) && CanShowWingmanBreakdown(proofData);
 	const size_t expansionKey = GetWingmanRowId(group, account);
 	bool isWingmanExpanded = false;
 	const bool hasAnyDisplayData = proofData && (!proofData->proofs.empty() || (ShouldShowWingmanRankColumn(providerName) && HasWingmanRankDisplayData(proofData)));
