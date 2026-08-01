@@ -2,6 +2,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <format>
 #include <functional>
 #include <mutex>
@@ -174,10 +175,21 @@ namespace {
 		return best;
 	}
 
-	static std::string CalculateWingmanBossOverallRank(const std::map<std::string, std::string>& categoryRanks) {
-		double sum = 0.0;
-		int count = 0;
+	static bool IsWingmanOptionalCategory(const char* category) {
+		return std::strcmp(category, "Mechanics") == 0 || std::strcmp(category, "Teamplay") == 0;
+	}
+
+	static std::optional<double> CalculateWingmanBossOverallNumericExcluding(
+		const std::map<std::string, std::string>& categoryRanks,
+		bool excludeOptionalCategories
+	) {
+		double weightedSum = 0.0;
+		double totalWeight = 0.0;
 		for (const char* category : wingmanRankCategories) {
+			if (excludeOptionalCategories && IsWingmanOptionalCategory(category)) {
+				continue;
+			}
+
 			auto it = categoryRanks.find(category);
 			if (it == categoryRanks.end() || it->second.empty()) {
 				continue;
@@ -188,20 +200,46 @@ namespace {
 				continue;
 			}
 
-			sum += *numeric;
-			++count;
+			weightedSum += static_cast<double>(*numeric);
+			totalWeight += 1.0;
 		}
 
-		if (count == 0) {
+		if (totalWeight <= 0.0) {
+			return std::nullopt;
+		}
+
+		return weightedSum / totalWeight;
+	}
+
+	static std::optional<double> CalculateWingmanBossOverallNumeric(const std::map<std::string, std::string>& categoryRanks) {
+		const auto fullAverage = CalculateWingmanBossOverallNumericExcluding(categoryRanks, false);
+		if (!Settings::WeighWingmanMechanicsTeamplayLess) {
+			return fullAverage;
+		}
+
+		const auto withoutOptional = CalculateWingmanBossOverallNumericExcluding(categoryRanks, true);
+		if (!fullAverage) {
+			return withoutOptional;
+		}
+		if (!withoutOptional) {
+			return fullAverage;
+		}
+
+		// Lower numeric is better — drop Mechanics/Teamplay only when they worsen the overall.
+		return (std::min)(*fullAverage, *withoutOptional);
+	}
+
+	static std::string CalculateWingmanBossOverallRank(const std::map<std::string, std::string>& categoryRanks) {
+		auto numeric = CalculateWingmanBossOverallNumeric(categoryRanks);
+		if (!numeric) {
 			return {};
 		}
-
-		return GetWingmanRankLetterFromNumeric(sum / static_cast<double>(count));
+		return GetWingmanRankLetterFromNumeric(*numeric);
 	}
 
 	// Tab rank: average of up to 10 best per-boss overall ranks in the current boss group.
 	static std::string CalculateWingmanTabRank(const Wingman::WingmanRankResponse& rankData, const BossGroup& group, int* outUsedCount = nullptr, int* outAvailableCount = nullptr) {
-		std::vector<int> bossNumerics;
+		std::vector<double> bossNumerics;
 		bossNumerics.reserve(group.cachedBossIds.size());
 
 		for (const auto& bossId : group.cachedBossIds) {
@@ -210,8 +248,7 @@ namespace {
 				continue;
 			}
 
-			const std::string overallRank = CalculateWingmanBossOverallRank(bossIt->second);
-			auto numeric = GetWingmanRankNumeric(overallRank);
+			auto numeric = CalculateWingmanBossOverallNumeric(bossIt->second);
 			if (!numeric) {
 				continue;
 			}

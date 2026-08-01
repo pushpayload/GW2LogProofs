@@ -497,6 +497,15 @@ static void DrawGeneralSettings() {
 			ImGui::EndCombo();
 		}
 
+		ImGui::EndTable();
+	}
+}
+
+static void DrawWingmanSettings() {
+	if (ImGui::BeginTable("WingmanSettingsTable", 2, ImGuiTableFlags_SizingStretchProp)) {
+		ImGui::TableSetupColumn("Setting", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+		ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::Text("Color KP by Highest Rank");
@@ -507,6 +516,18 @@ static void DrawGeneralSettings() {
 		}
 		if (ImGui::IsItemHovered()) {
 			ImGui::SetTooltip("When Wingman Rank is enabled, color killproof amounts by the best category rank for that boss.");
+		}
+
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Ignore Mechanics/Teamplay");
+		ImGui::TableNextColumn();
+		if (ImGui::Checkbox("##WeighWingmanMechanicsTeamplayLess", &Settings::WeighWingmanMechanicsTeamplayLess)) {
+			Settings::Settings[WINDOW_LOG_PROOFS_KEY][WEIGH_WINGMAN_MECHANICS_TEAMPLAY_LESS] = Settings::WeighWingmanMechanicsTeamplayLess;
+			Settings::Save(SettingsPath);
+		}
+		if (ImGui::IsItemHovered()) {
+			ImGui::SetTooltip("For local Overall and tab ranks, drop Mechanics/Teamplay only when including them would lower the score.\nDoes not change Wingman's API global/category ranks.");
 		}
 
 		ImGui::EndTable();
@@ -548,6 +569,10 @@ void RenderWindowSettings() {
 	ImGui::Indent(10.0f);
 	if (ImGui::CollapsingHeader("General")) {
 		DrawGeneralSettings();
+	}
+
+	if (ImGui::CollapsingHeader("Wingman")) {
+		DrawWingmanSettings();
 	}
 
 	if (ImGui::CollapsingHeader("Network Settings")) {

@@ -30,6 +30,7 @@ const char* INCLUDE_MISSING_ACCOUNTS = "IncludeMissingAccounts";
 const char* SHOW_WINGMAN_RANK_ENTITY = "ShowWingmanRankEntity";
 const char* SHOW_WINGMAN_RANK_BREAKDOWN = "ShowWingmanRankBreakdown";
 const char* COLOR_WINGMAN_KP_BY_HIGHEST_RANK = "ColorWingmanKpByHighestRank";
+const char* WEIGH_WINGMAN_MECHANICS_TEAMPLAY_LESS = "WeighWingmanMechanicsTeamplayLess";
 
 const char* HOVER_ENABLED = "HoverEnabled";
 const char* HOVER_COLOUR = "HoverColour";
@@ -118,6 +119,9 @@ namespace Settings {
 		if (!Settings[WINDOW_LOG_PROOFS_KEY][COLOR_WINGMAN_KP_BY_HIGHEST_RANK].is_null()) {
 			Settings[WINDOW_LOG_PROOFS_KEY][COLOR_WINGMAN_KP_BY_HIGHEST_RANK].get_to<bool>(ColorWingmanKpByHighestRank);
 		}
+		if (!Settings[WINDOW_LOG_PROOFS_KEY][WEIGH_WINGMAN_MECHANICS_TEAMPLAY_LESS].is_null()) {
+			Settings[WINDOW_LOG_PROOFS_KEY][WEIGH_WINGMAN_MECHANICS_TEAMPLAY_LESS].get_to<bool>(WeighWingmanMechanicsTeamplayLess);
+		}
 
 		/* Hover settings */
 		if (!Settings[WINDOW_LOG_PROOFS_KEY][HOVER_ENABLED].is_null()) {
@@ -182,6 +186,7 @@ namespace Settings {
 	bool ShowWingmanRankEntity = false;
 	bool ShowWingmanRankBreakdown = false;
 	bool ColorWingmanKpByHighestRank = false;
+	bool WeighWingmanMechanicsTeamplayLess = false;
 
 	bool hoverEnabled = true;
 	ImU32 hoverColour = 4285558896;

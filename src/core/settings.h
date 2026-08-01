@@ -43,6 +43,7 @@ extern const char* INCLUDE_MISSING_ACCOUNTS;
 extern const char* SHOW_WINGMAN_RANK_ENTITY;
 extern const char* SHOW_WINGMAN_RANK_BREAKDOWN;
 extern const char* COLOR_WINGMAN_KP_BY_HIGHEST_RANK;
+extern const char* WEIGH_WINGMAN_MECHANICS_TEAMPLAY_LESS;
 
 extern const char* HOVER_ENABLED;
 extern const char* HOVER_COLOUR;
@@ -82,6 +83,7 @@ namespace Settings {
 	extern bool ShowWingmanRankEntity;
 	extern bool ShowWingmanRankBreakdown;
 	extern bool ColorWingmanKpByHighestRank;
+	extern bool WeighWingmanMechanicsTeamplayLess;
 
 	extern bool hoverEnabled;
 	extern ImU32 hoverColour;
