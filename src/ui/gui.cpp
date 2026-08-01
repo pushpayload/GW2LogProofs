@@ -88,6 +88,43 @@ namespace {
 		return 320.0f;
 	}
 
+	// Colors sampled from Wingman rev profile rank emblems (/static/rev/ranks/emblem_*.png).
+	static ImVec4 GetWingmanRankLetterColor(const std::string& rank) {
+		unsigned rgb = 0;
+		if (rank == "SSS" || rank == "SS" || rank == "S") {
+			rgb = 0x9800F8;
+		} else if (rank == "A+" || rank == "A") {
+			rgb = 0xF89000;
+		} else if (rank == "B+" || rank == "B") {
+			rgb = 0x88C040;
+		} else if (rank == "C+" || rank == "C") {
+			rgb = 0x5878A8;
+		} else if (rank == "D" || rank == "E") {
+			rgb = 0xA8A0A0;
+		} else if (rank == "F") {
+			rgb = 0xF84000;
+		} else {
+			return ImGui::GetStyleColorVec4(ImGuiCol_Text);
+		}
+
+		return ImVec4(
+			((rgb >> 16) & 0xFF) / 255.0f,
+			((rgb >> 8) & 0xFF) / 255.0f,
+			(rgb & 0xFF) / 255.0f,
+			1.0f
+		);
+	}
+
+	static void DrawWingmanRankLetter(const std::string& rank) {
+		ImGui::TextColored(GetWingmanRankLetterColor(rank), "%s", rank.c_str());
+	}
+
+	static void DrawWingmanLabeledRank(const char* label, const std::string& rank) {
+		ImGui::Text("%s: ", label);
+		ImGui::SameLine(0.0f, 0.0f);
+		DrawWingmanRankLetter(rank);
+	}
+
 	static float GetAccountColumnWidth(const std::string& providerName) {
 		float width = Settings::ColumnSizeAccount;
 		if (ShouldShowWingmanRankColumn(providerName)) {
@@ -128,6 +165,17 @@ namespace {
 		}
 
 		return !rankData->globalRank.empty() || !rankData->note.empty() || !rankData->bestPerBoss.empty();
+	}
+
+	static bool ShouldShowWingmanRankNote(const Wingman::WingmanRankResponse& rankData) {
+		// ratePerformance can return a stale "not enough data" note alongside a successful ranked payload.
+		if (rankData.note.empty()) {
+			return false;
+		}
+		if (rankData.success && rankData.enoughData && !rankData.globalRank.empty()) {
+			return false;
+		}
+		return true;
 	}
 
 	static bool HasWingmanBreakdownForGroup(const Wingman::WingmanRankResponse* rankData, const BossGroup& group) {
@@ -178,21 +226,75 @@ namespace {
 		return hiddenBossKeys;
 	}
 
+	static void DrawWingmanBossKpTooltip(const Wingman::WingmanRankResponse* rankData, const std::string& bossId) {
+		if (!rankData) {
+			return;
+		}
+
+		auto bossIt = rankData->bestPerBoss.find(bossId);
+		if (bossIt == rankData->bestPerBoss.end()) {
+			return;
+		}
+
+		bool hasCategoryRank = false;
+		for (const char* category : wingmanRankCategories) {
+			auto categoryIt = bossIt->second.find(category);
+			if (categoryIt != bossIt->second.end() && !categoryIt->second.empty()) {
+				hasCategoryRank = true;
+				break;
+			}
+		}
+		if (!hasCategoryRank || !ImGui::IsItemHovered()) {
+			return;
+		}
+
+		ImGui::BeginTooltip();
+		for (const char* category : wingmanRankCategories) {
+			auto categoryIt = bossIt->second.find(category);
+			if (categoryIt != bossIt->second.end() && !categoryIt->second.empty()) {
+				DrawWingmanLabeledRank(category, categoryIt->second);
+			}
+		}
+		ImGui::EndTooltip();
+	}
+
 	static void DrawWingmanRankTooltip(const Wingman::WingmanRankResponse& rankData, const BossGroup& group) {
 		ImGui::BeginTooltip();
+		if (!rankData.era.empty()) {
+			ImGui::Text("Era: %s", rankData.era.c_str());
+		}
 		if (!rankData.globalRank.empty()) {
-			ImGui::Text("Global Rank: %s", rankData.globalRank.c_str());
+			DrawWingmanLabeledRank("Global Rank", rankData.globalRank);
 		}
 		if (rankData.bossesCompleted > 0) {
 			ImGui::Text("Bosses Completed: %d", rankData.bossesCompleted);
 		}
+		if (rankData.commanderRatio > 0.0) {
+			ImGui::Text("Commander Ratio: %.1f%%", rankData.commanderRatio * 100.0);
+		}
 		for (const char* category : wingmanRankCategories) {
 			auto it = rankData.ranksByCategory.find(category);
 			if (it != rankData.ranksByCategory.end()) {
-				ImGui::Text("%s: %s", category, it->second.c_str());
+				DrawWingmanLabeledRank(category, it->second);
 			}
 		}
-		if (!rankData.note.empty()) {
+		if (!rankData.mainProfessions.empty()) {
+			ImGui::Separator();
+			ImGui::Text("Main Professions:");
+			for (const auto& profession : rankData.mainProfessions) {
+				ImGui::Text("%s: %d", profession.first.c_str(), profession.second);
+			}
+		}
+		if (!rankData.completion.empty()) {
+			ImGui::Separator();
+			ImGui::Text("Completion:");
+			for (const auto& entry : rankData.completion) {
+				if (entry.second) {
+					ImGui::TextUnformatted(entry.first.c_str());
+				}
+			}
+		}
+		if (ShouldShowWingmanRankNote(rankData)) {
 			ImGui::Separator();
 			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + GetWingmanTooltipWrapWidth());
 			ImGui::TextWrapped("%s", rankData.note.c_str());
@@ -263,7 +365,7 @@ namespace {
 			} else {
 				ImGui::Text("Ask Wingman to calculate ranks for this player.");
 			}
-			if (!rankData->note.empty()) {
+			if (ShouldShowWingmanRankNote(*rankData)) {
 				ImGui::Separator();
 				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + GetWingmanTooltipWrapWidth());
 				ImGui::TextWrapped("%s", rankData->note.c_str());
@@ -290,7 +392,13 @@ namespace {
 				std::scoped_lock lock(wingmanRerankMutex);
 				auto& state = wingmanRerankStates[account];
 				state.pending = false;
-				state.lastNote = response.note;
+				if (ShouldShowWingmanRankNote(response)) {
+					state.lastNote = response.note;
+				} else if (response.enoughData && !response.globalRank.empty()) {
+					state.lastNote = std::format("Rank calculated: {}", response.globalRank);
+				} else {
+					state.lastNote.clear();
+				}
 			}
 
 			const bool shouldRefreshPlayerRanks = response.enoughData || !response.globalRank.empty() || !response.bestPerBoss.empty();
@@ -523,14 +631,14 @@ static void DrawWingmanRankCell(const std::string& account, const BossGroup& gro
 	}
 
 	if (rankData->success && rankData->enoughData && !rankData->globalRank.empty()) {
-		ImGui::Text("%s", rankData->globalRank.c_str());
+		DrawWingmanRankLetter(rankData->globalRank);
 		if (ImGui::IsItemHovered()) {
 			DrawWingmanRankTooltip(*rankData, group);
 		}
 		return;
 	}
 
-	if (!rankData->note.empty()) {
+	if (!rankData->success || !rankData->enoughData || ShouldShowWingmanRankNote(*rankData)) {
 		if (!rankData->success) {
 			ImGui::TextDisabled("Unranked");
 		} else if (!rankData->enoughData) {
@@ -592,7 +700,7 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 				continue;
 			}
 
-			ImGui::Text("%s", categoryIt->second.c_str());
+			DrawWingmanRankLetter(categoryIt->second);
 		}
 
 		if (ShouldShowWingmanRankColumn(WINGMAN_PROVIDER_NAME)) {
@@ -688,6 +796,9 @@ static void DrawPlayerRow(const std::string& account, const BossGroup& group, IB
 		if (proofData) {
 			auto it = proofData->proofs.find(group.cachedBossIds[i]);
 			ImGui::Text(it != proofData->proofs.end() ? std::to_string(it->second.amount).c_str() : (isDisabled ? "" : "0"));
+			if (ShouldShowWingmanRankColumn(providerName)) {
+				DrawWingmanBossKpTooltip(wingmanRankData, group.cachedBossIds[i]);
+			}
 		} else {
 			if (lazyState == LoadState::LOADING) {
 				DrawSpinner();
