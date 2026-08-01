@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <format>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -81,7 +83,7 @@ namespace {
 	}
 
 	static float GetWingmanRankColumnWidth() {
-		return (std::max)(Settings::ColumnSizeBosses, 44.0f);
+		return (std::max)(Settings::ColumnSizeBosses, 64.0f);
 	}
 
 	static float GetWingmanTooltipWrapWidth() {
@@ -119,10 +121,171 @@ namespace {
 		ImGui::TextColored(GetWingmanRankLetterColor(rank), "%s", rank.c_str());
 	}
 
+	static void DrawWingmanRankPair(const std::string& globalRank, const std::string& tabRank) {
+		ImGui::BeginGroup();
+		DrawWingmanRankLetter(globalRank);
+		if (!tabRank.empty()) {
+			ImGui::SameLine(0.0f, 0.0f);
+			ImGui::TextUnformatted("/");
+			ImGui::SameLine(0.0f, 0.0f);
+			DrawWingmanRankLetter(tabRank);
+		}
+		ImGui::EndGroup();
+	}
+
 	static void DrawWingmanLabeledRank(const char* label, const std::string& rank) {
 		ImGui::Text("%s: ", label);
 		ImGui::SameLine(0.0f, 0.0f);
 		DrawWingmanRankLetter(rank);
+	}
+
+	// Same numeric scale Wingman uses for globalRankNumeric (lower is better).
+	static std::optional<int> GetWingmanRankNumeric(const std::string& rank) {
+		if (rank == "SSS") return 0;
+		if (rank == "SS") return 1;
+		if (rank == "S") return 2;
+		if (rank == "A+") return 3;
+		if (rank == "A") return 4;
+		if (rank == "B+") return 5;
+		if (rank == "B") return 6;
+		if (rank == "C+") return 7;
+		if (rank == "C") return 8;
+		if (rank == "D") return 9;
+		if (rank == "E") return 10;
+		if (rank == "F") return 11;
+		return std::nullopt;
+	}
+
+	static std::string GetWingmanRankLetterFromNumeric(double value) {
+		static const std::pair<const char*, int> kScale[] = {
+			{"SSS", 0}, {"SS", 1}, {"S", 2}, {"A+", 3}, {"A", 4}, {"B+", 5},
+			{"B", 6}, {"C+", 7}, {"C", 8}, {"D", 9}, {"E", 10}, {"F", 11}
+		};
+
+		const char* best = "F";
+		double bestDistance = 1e9;
+		for (const auto& [letter, numeric] : kScale) {
+			const double distance = std::abs(value - static_cast<double>(numeric));
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				best = letter;
+			}
+		}
+		return best;
+	}
+
+	static std::string CalculateWingmanBossOverallRank(const std::map<std::string, std::string>& categoryRanks) {
+		double sum = 0.0;
+		int count = 0;
+		for (const char* category : wingmanRankCategories) {
+			auto it = categoryRanks.find(category);
+			if (it == categoryRanks.end() || it->second.empty()) {
+				continue;
+			}
+
+			auto numeric = GetWingmanRankNumeric(it->second);
+			if (!numeric) {
+				continue;
+			}
+
+			sum += *numeric;
+			++count;
+		}
+
+		if (count == 0) {
+			return {};
+		}
+
+		return GetWingmanRankLetterFromNumeric(sum / static_cast<double>(count));
+	}
+
+	// Tab rank: average of up to 10 best per-boss overall ranks in the current boss group.
+	static std::string CalculateWingmanTabRank(const Wingman::WingmanRankResponse& rankData, const BossGroup& group, int* outUsedCount = nullptr, int* outAvailableCount = nullptr) {
+		std::vector<int> bossNumerics;
+		bossNumerics.reserve(group.cachedBossIds.size());
+
+		for (const auto& bossId : group.cachedBossIds) {
+			auto bossIt = rankData.bestPerBoss.find(bossId);
+			if (bossIt == rankData.bestPerBoss.end()) {
+				continue;
+			}
+
+			const std::string overallRank = CalculateWingmanBossOverallRank(bossIt->second);
+			auto numeric = GetWingmanRankNumeric(overallRank);
+			if (!numeric) {
+				continue;
+			}
+			bossNumerics.push_back(*numeric);
+		}
+
+		if (outAvailableCount) {
+			*outAvailableCount = static_cast<int>(bossNumerics.size());
+		}
+
+		if (bossNumerics.empty()) {
+			if (outUsedCount) {
+				*outUsedCount = 0;
+			}
+			return {};
+		}
+
+		std::sort(bossNumerics.begin(), bossNumerics.end());
+		const size_t usedCount = (std::min)(bossNumerics.size(), size_t {10});
+		double sum = 0.0;
+		for (size_t i = 0; i < usedCount; ++i) {
+			sum += bossNumerics[i];
+		}
+
+		if (outUsedCount) {
+			*outUsedCount = static_cast<int>(usedCount);
+		}
+
+		return GetWingmanRankLetterFromNumeric(sum / static_cast<double>(usedCount));
+	}
+
+	// Highest rank = best letter (lowest numeric on Wingman's scale).
+	static std::string GetWingmanBossHighestRank(const std::map<std::string, std::string>& categoryRanks) {
+		std::optional<int> bestNumeric;
+		std::string bestRank;
+		for (const char* category : wingmanRankCategories) {
+			auto it = categoryRanks.find(category);
+			if (it == categoryRanks.end() || it->second.empty()) {
+				continue;
+			}
+
+			auto numeric = GetWingmanRankNumeric(it->second);
+			if (!numeric) {
+				continue;
+			}
+
+			if (!bestNumeric || *numeric < *bestNumeric) {
+				bestNumeric = *numeric;
+				bestRank = it->second;
+			}
+		}
+		return bestRank;
+	}
+
+	static std::string GetWingmanBossHighestRankForId(const Wingman::WingmanRankResponse* rankData, const std::string& bossId) {
+		if (!rankData) {
+			return {};
+		}
+		auto bossIt = rankData->bestPerBoss.find(bossId);
+		if (bossIt == rankData->bestPerBoss.end()) {
+			return {};
+		}
+		return GetWingmanBossHighestRank(bossIt->second);
+	}
+
+	static void DrawWingmanBossKpAmount(const std::string& amountText, const Wingman::WingmanRankResponse* rankData, const std::string& bossId, bool colorByRank) {
+		if (colorByRank) {
+			const std::string highestRank = GetWingmanBossHighestRankForId(rankData, bossId);
+			if (!highestRank.empty()) {
+				ImGui::TextColored(GetWingmanRankLetterColor(highestRank), "%s", amountText.c_str());
+				return;
+			}
+		}
+		ImGui::Text("%s", amountText.c_str());
 	}
 
 	static float GetAccountColumnWidth(const std::string& providerName) {
@@ -249,6 +412,11 @@ namespace {
 		}
 
 		ImGui::BeginTooltip();
+		std::string overallRank = CalculateWingmanBossOverallRank(bossIt->second);
+		if (!overallRank.empty()) {
+			DrawWingmanLabeledRank("Overall", overallRank);
+			ImGui::Separator();
+		}
 		for (const char* category : wingmanRankCategories) {
 			auto categoryIt = bossIt->second.find(category);
 			if (categoryIt != bossIt->second.end() && !categoryIt->second.empty()) {
@@ -258,13 +426,18 @@ namespace {
 		ImGui::EndTooltip();
 	}
 
-	static void DrawWingmanRankTooltip(const Wingman::WingmanRankResponse& rankData, const BossGroup& group) {
+	static void DrawWingmanRankTooltip(const Wingman::WingmanRankResponse& rankData, const BossGroup& group, const std::string& tabRank = {}, int tabUsedCount = 0, int tabAvailableCount = 0) {
 		ImGui::BeginTooltip();
 		if (!rankData.era.empty()) {
 			ImGui::Text("Era: %s", rankData.era.c_str());
 		}
 		if (!rankData.globalRank.empty()) {
 			DrawWingmanLabeledRank("Global Rank", rankData.globalRank);
+		}
+		if (!tabRank.empty()) {
+			const std::string tabLabel = group.name.empty() ? "Tab Rank" : (group.name + " Rank");
+			DrawWingmanLabeledRank(tabLabel.c_str(), tabRank);
+			ImGui::TextDisabled("Top %d of %d bosses in this tab", tabUsedCount, tabAvailableCount);
 		}
 		if (rankData.bossesCompleted > 0) {
 			ImGui::Text("Bosses Completed: %d", rankData.bossesCompleted);
@@ -631,9 +804,12 @@ static void DrawWingmanRankCell(const std::string& account, const BossGroup& gro
 	}
 
 	if (rankData->success && rankData->enoughData && !rankData->globalRank.empty()) {
-		DrawWingmanRankLetter(rankData->globalRank);
+		int tabUsedCount = 0;
+		int tabAvailableCount = 0;
+		const std::string tabRank = CalculateWingmanTabRank(*rankData, group, &tabUsedCount, &tabAvailableCount);
+		DrawWingmanRankPair(rankData->globalRank, tabRank);
 		if (ImGui::IsItemHovered()) {
-			DrawWingmanRankTooltip(*rankData, group);
+			DrawWingmanRankTooltip(*rankData, group, tabRank, tabUsedCount, tabAvailableCount);
 		}
 		return;
 	}
@@ -665,15 +841,11 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 		return;
 	}
 
-	for (const char* category : wingmanRankCategories) {
-		if (!HasWingmanCategoryForGroup(rankData, group, category)) {
-			continue;
-		}
-
+	auto drawBreakdownRow = [&](const char* label, bool isOverall) {
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::Indent(20.0f);
-		ImGui::TextDisabled("%s", category);
+		ImGui::TextDisabled("%s", label);
 		ImGui::Unindent(20.0f);
 
 		if (showKpmeId) {
@@ -694,7 +866,17 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 				continue;
 			}
 
-			auto categoryIt = bossIt->second.find(category);
+			if (isOverall) {
+				std::string overallRank = CalculateWingmanBossOverallRank(bossIt->second);
+				if (overallRank.empty()) {
+					ImGui::Text("");
+				} else {
+					DrawWingmanRankLetter(overallRank);
+				}
+				continue;
+			}
+
+			auto categoryIt = bossIt->second.find(label);
 			if (categoryIt == bossIt->second.end() || categoryIt->second.empty()) {
 				ImGui::Text("");
 				continue;
@@ -709,6 +891,15 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 		}
 
 		HighlightRowOnHover(ImGui::GetCurrentContext()->CurrentTable);
+	};
+
+	drawBreakdownRow("Overall", true);
+
+	for (const char* category : wingmanRankCategories) {
+		if (!HasWingmanCategoryForGroup(rankData, group, category)) {
+			continue;
+		}
+		drawBreakdownRow(category, false);
 	}
 }
 
@@ -793,9 +984,15 @@ static void DrawPlayerRow(const std::string& account, const BossGroup& group, IB
 	for (size_t i = 0; i < group.cachedBossIds.size(); ++i) {
 		ImGui::TableNextColumn();
 		HighlightColumnOnHover();
+		const bool colorKpByRank = ShouldShowWingmanRankColumn(providerName) && Settings::ColorWingmanKpByHighestRank;
 		if (proofData) {
 			auto it = proofData->proofs.find(group.cachedBossIds[i]);
-			ImGui::Text(it != proofData->proofs.end() ? std::to_string(it->second.amount).c_str() : (isDisabled ? "" : "0"));
+			const std::string amountText = it != proofData->proofs.end() ? std::to_string(it->second.amount) : (isDisabled ? "" : "0");
+			if (!amountText.empty()) {
+				DrawWingmanBossKpAmount(amountText, wingmanRankData, group.cachedBossIds[i], colorKpByRank);
+			} else {
+				ImGui::Text("");
+			}
 			if (ShouldShowWingmanRankColumn(providerName)) {
 				DrawWingmanBossKpTooltip(wingmanRankData, group.cachedBossIds[i]);
 			}
@@ -803,7 +1000,7 @@ static void DrawPlayerRow(const std::string& account, const BossGroup& group, IB
 			if (lazyState == LoadState::LOADING) {
 				DrawSpinner();
 			} else {
-				ImGui::Text(isDisabled ? "" : "0");
+				DrawWingmanBossKpAmount(isDisabled ? "" : "0", wingmanRankData, group.cachedBossIds[i], colorKpByRank);
 			}
 		}
 	}

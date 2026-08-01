@@ -497,6 +497,18 @@ static void DrawGeneralSettings() {
 			ImGui::EndCombo();
 		}
 
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Color KP by Highest Rank");
+		ImGui::TableNextColumn();
+		if (ImGui::Checkbox("##ColorWingmanKpByHighestRank", &Settings::ColorWingmanKpByHighestRank)) {
+			Settings::Settings[WINDOW_LOG_PROOFS_KEY][COLOR_WINGMAN_KP_BY_HIGHEST_RANK] = Settings::ColorWingmanKpByHighestRank;
+			Settings::Save(SettingsPath);
+		}
+		if (ImGui::IsItemHovered()) {
+			ImGui::SetTooltip("When Wingman Rank is enabled, color killproof amounts by the best category rank for that boss.");
+		}
+
 		ImGui::EndTable();
 	}
 }
