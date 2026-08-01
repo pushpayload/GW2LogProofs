@@ -393,6 +393,90 @@ namespace {
 		ImGui::Text("%s", amountText.c_str());
 	}
 
+	static const Wingman::WingmanPerformanceEntry* FindWingmanPerformanceEntry(
+		const Wingman::WingmanRankResponse& rankData,
+		const std::string& bossId,
+		const char* category
+	) {
+		auto keysIt = rankData.top10BossKeysPerCategory.find(category);
+		auto perfsIt = rankData.byPerformanceType.find(category);
+		if (keysIt == rankData.top10BossKeysPerCategory.end() || perfsIt == rankData.byPerformanceType.end()) {
+			return nullptr;
+		}
+
+		const auto& keys = keysIt->second;
+		const auto& perfs = perfsIt->second;
+		const size_t count = (std::min)(keys.size(), perfs.size());
+		for (size_t i = 0; i < count; ++i) {
+			if (keys[i] == bossId) {
+				return &perfs[i];
+			}
+		}
+		return nullptr;
+	}
+
+	static void DrawWingmanPerformanceEntryDetails(const char* label, const Wingman::WingmanPerformanceEntry& entry) {
+		if (label && *label) {
+			if (!entry.rank.empty()) {
+				DrawWingmanLabeledRank(label, entry.rank);
+			} else {
+				ImGui::TextUnformatted(label);
+			}
+		} else if (!entry.rank.empty()) {
+			DrawWingmanLabeledRank("Rank", entry.rank);
+		}
+
+		if (!entry.comments.empty()) {
+			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + GetWingmanTooltipWrapWidth());
+			ImGui::TextWrapped("%s", entry.comments.c_str());
+			ImGui::PopTextWrapPos();
+		}
+
+		if (!entry.log.empty()) {
+			ImGui::TextDisabled("%s", entry.log.c_str());
+		}
+	}
+
+	static void DrawWingmanBossCategoryCommentTooltip(
+		const Wingman::WingmanRankResponse& rankData,
+		const std::string& bossId,
+		const char* category
+	) {
+		const auto* entry = FindWingmanPerformanceEntry(rankData, bossId, category);
+		if (!entry || (entry->comments.empty() && entry->log.empty()) || !ImGui::IsItemHovered()) {
+			return;
+		}
+
+		ImGui::BeginTooltip();
+		DrawWingmanPerformanceEntryDetails(nullptr, *entry);
+		ImGui::EndTooltip();
+	}
+
+	static void DrawWingmanBossOverallCommentTooltip(const Wingman::WingmanRankResponse& rankData, const std::string& bossId) {
+		if (!ImGui::IsItemHovered()) {
+			return;
+		}
+
+		bool hasAny = false;
+		for (const char* category : wingmanRankCategories) {
+			const auto* entry = FindWingmanPerformanceEntry(rankData, bossId, category);
+			if (!entry || (entry->comments.empty() && entry->log.empty())) {
+				continue;
+			}
+			if (!hasAny) {
+				ImGui::BeginTooltip();
+				hasAny = true;
+			} else {
+				ImGui::Separator();
+			}
+			DrawWingmanPerformanceEntryDetails(category, *entry);
+		}
+
+		if (hasAny) {
+			ImGui::EndTooltip();
+		}
+	}
+
 	static float GetAccountColumnWidth(const std::string& providerName) {
 		float width = Settings::ColumnSizeAccount;
 		if (ShouldShowWingmanRankColumn(providerName)) {
@@ -972,6 +1056,7 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 					ImGui::Text("");
 				} else {
 					DrawWingmanRankLetter(GetWingmanRankLetterFromNumeric(*numeric));
+					DrawWingmanBossOverallCommentTooltip(*rankData, bossId);
 				}
 				continue;
 			}
@@ -983,34 +1068,16 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 			}
 
 			DrawWingmanRankLetter(categoryIt->second);
+			DrawWingmanBossCategoryCommentTooltip(*rankData, bossId, label);
 		}
 
 		if (ShouldShowWingmanRankColumn(WINGMAN_PROVIDER_NAME)) {
 			ImGui::TableNextColumn();
 			// Top 10 / all for this row — full categories, no Mechanics/Teamplay ignore.
 			if (isOverall) {
-				const std::vector<double> bossNumerics = CollectWingmanBossOverallNumerics(*rankData, group, false);
-				if (!bossNumerics.empty()) {
-					DrawWingmanTop10AndAllRank(bossNumerics);
-				} else if (!rankData->globalRank.empty()) {
-					// No per-boss data on this tab — still surface the API overall.
-					DrawWingmanRankLetter(rankData->globalRank);
-				} else {
-					ImGui::Text("");
-				}
+				DrawWingmanTop10AndAllRank(CollectWingmanBossOverallNumerics(*rankData, group, false));
 			} else {
-				const std::vector<double> bossNumerics = CollectWingmanCategoryNumerics(*rankData, group, label);
-				if (!bossNumerics.empty()) {
-					DrawWingmanTop10AndAllRank(bossNumerics);
-				} else {
-					auto categoryIt = rankData->ranksByCategory.find(label);
-					if (categoryIt != rankData->ranksByCategory.end() && !categoryIt->second.empty()) {
-						// No per-boss data on this tab — still surface the API category rank.
-						DrawWingmanRankLetter(categoryIt->second);
-					} else {
-						ImGui::Text("");
-					}
-				}
+				DrawWingmanTop10AndAllRank(CollectWingmanCategoryNumerics(*rankData, group, label));
 			}
 		}
 
