@@ -102,9 +102,7 @@ void AddonLoad(AddonAPI* addonApi) {
 }
 
 void AddonUnload() {
-	PlayerManager::Reset();
 	APIDefs->UI.DeregisterCloseOnEscape("Log Proofs");
-
 	APIDefs->Renderer.Deregister(AddonOptions);
 	APIDefs->Renderer.Deregister(AddonRender);
 
@@ -113,7 +111,11 @@ void AddonUnload() {
 	APIDefs->InputBinds.Deregister(KB_TOGGLE_SHOW_WINDOW_LOG_PROOFS);
 
 	ShutdownTrackerManager();
+
+	// Cancel/wait for in-flight WinHTTP work before tearing down addon state / CRT.
 	HTTPClient::Shutdown();
+	PlayerManager::Reset();
+	ResetWingmanUiState();
 
 	APIDefs->Log(ELogLevel_INFO, ADDON_NAME, "Log Proofs unloaded successfully");
 }

@@ -3,6 +3,7 @@
 
 void RenderWindowLogProofs(void);
 void RenderWindowSettings(void);
+void ResetWingmanUiState(void);
 
 void ToggleShowWindowLogProofs(const char* keybindIdentifier, bool isRelease);
 

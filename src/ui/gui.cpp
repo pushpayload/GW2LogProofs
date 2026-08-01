@@ -618,7 +618,17 @@ namespace {
 			}
 		});
 	}
+
+	void ClearWingmanUiState() {
+		std::scoped_lock lock(wingmanRerankMutex);
+		wingmanRerankStates.clear();
+		wingmanExpandedPlayers.clear();
+	}
 } // namespace
+
+void ResetWingmanUiState() {
+	ClearWingmanUiState();
+}
 
 static void DrawSpinner() {
 	ImGuiWindow* window = ImGui::GetCurrentWindow();

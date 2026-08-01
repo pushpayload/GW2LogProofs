@@ -9,7 +9,7 @@ void WingmanProvider::LoadPlayerDataAsync(const std::string& account, std::funct
 	};
 
 	auto pending = std::make_shared<PendingWingmanLoad>();
-	auto finalizeLoad = [this, pending, callback, account]() {
+	auto finalizeLoad = [pending, callback, account]() {
 		if (pending->completedRequests.fetch_add(1) + 1 < 2) {
 			return;
 		}

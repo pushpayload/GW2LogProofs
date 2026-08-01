@@ -15,7 +15,7 @@ public:
 
 private:
 	Kpme::KpmeClient client_;
-	PlayerProofData ConvertKpmeResponse(const Kpme::KpmeResponse& response);
+	static PlayerProofData ConvertKpmeResponse(const Kpme::KpmeResponse& response);
 };
 
 #endif

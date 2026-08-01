@@ -9,9 +9,8 @@
 
 
 void KpmeProvider::LoadPlayerDataAsync(const std::string& account, std::function<void(const PlayerProofData&)> callback) {
-	client_.GetKpAsync(account, [this, callback](const Kpme::KpmeResponse& response) {
-		PlayerProofData data = ConvertKpmeResponse(response);
-		callback(data);
+	client_.GetKpAsync(account, [callback](const Kpme::KpmeResponse& response) {
+		callback(ConvertKpmeResponse(response));
 	});
 }
 
