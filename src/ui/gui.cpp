@@ -449,7 +449,45 @@ namespace {
 
 		ImGui::BeginTooltip();
 		DrawWingmanPerformanceEntryDetails(nullptr, *entry);
+		if (!entry->log.empty()) {
+			ImGui::Separator();
+			ImGui::TextDisabled("Click to open log");
+		}
 		ImGui::EndTooltip();
+	}
+
+	static void OpenWingmanLog(const std::string& logId) {
+		if (logId.empty()) {
+			return;
+		}
+		const std::string url = std::format("https://gw2wingman.nevermindcreations.de/log/{}", logId);
+		ShellExecuteA(0, "open", url.c_str(), 0, 0, SW_SHOW);
+	}
+
+	// For Overall cells: only open when exactly one unique log is attached across categories.
+	static std::string GetSingleWingmanLogForBoss(const Wingman::WingmanRankResponse& rankData, const std::string& bossId) {
+		std::string singleLog;
+		for (const char* category : wingmanRankCategories) {
+			const auto* entry = FindWingmanPerformanceEntry(rankData, bossId, category);
+			if (!entry || entry->log.empty()) {
+				continue;
+			}
+			if (singleLog.empty()) {
+				singleLog = entry->log;
+			} else if (singleLog != entry->log) {
+				return {};
+			}
+		}
+		return singleLog;
+	}
+
+	static void TryOpenWingmanLogOnClick(const std::string& logId) {
+		if (!logId.empty() && ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+			OpenWingmanLog(logId);
+		}
+		if (!logId.empty() && ImGui::IsItemHovered()) {
+			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+		}
 	}
 
 	static void DrawWingmanBossOverallCommentTooltip(const Wingman::WingmanRankResponse& rankData, const std::string& bossId) {
@@ -458,10 +496,14 @@ namespace {
 		}
 
 		bool hasAny = false;
+		int entriesWithLog = 0;
 		for (const char* category : wingmanRankCategories) {
 			const auto* entry = FindWingmanPerformanceEntry(rankData, bossId, category);
 			if (!entry || (entry->comments.empty() && entry->log.empty())) {
 				continue;
+			}
+			if (!entry->log.empty()) {
+				++entriesWithLog;
 			}
 			if (!hasAny) {
 				ImGui::BeginTooltip();
@@ -473,6 +515,14 @@ namespace {
 		}
 
 		if (hasAny) {
+			const std::string singleLog = GetSingleWingmanLogForBoss(rankData, bossId);
+			if (!singleLog.empty()) {
+				ImGui::Separator();
+				ImGui::TextDisabled("Click to open log");
+			} else if (entriesWithLog > 1) {
+				ImGui::Separator();
+				ImGui::TextDisabled("Multiple logs — open from a category row");
+			}
 			ImGui::EndTooltip();
 		}
 	}
@@ -810,7 +860,14 @@ static void DrawSpinner() {
 static void DrawPlayerAccountName(const std::string& account, const PlayerProofData* proofData) {
 	if (proofData && !proofData->profileUrl.empty()) {
 		if (ImGui::TextURL(account.c_str())) {
-			ShellExecuteA(0, 0, proofData->profileUrl.c_str(), 0, 0, SW_SHOW);
+			std::string url = proofData->profileUrl;
+			if (url.find("gw2wingman.nevermindcreations.de") != std::string::npos) {
+				const std::string& profileAccount = !proofData->accountName.empty() ? proofData->accountName : account;
+				url = Settings::UseWingmanRevProfile
+					? std::format("https://gw2wingman.nevermindcreations.de/rev/player/{}", profileAccount)
+					: std::format("https://gw2wingman.nevermindcreations.de/kp/{}", profileAccount);
+			}
+			ShellExecuteA(0, "open", url.c_str(), 0, 0, SW_SHOW);
 		}
 	} else {
 		ImGui::Text(account.c_str());
@@ -1056,6 +1113,7 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 					ImGui::Text("");
 				} else {
 					DrawWingmanRankLetter(GetWingmanRankLetterFromNumeric(*numeric));
+					TryOpenWingmanLogOnClick(GetSingleWingmanLogForBoss(*rankData, bossId));
 					DrawWingmanBossOverallCommentTooltip(*rankData, bossId);
 				}
 				continue;
@@ -1068,6 +1126,8 @@ static void DrawWingmanBreakdownRows(const BossGroup& group, bool showKpmeId, co
 			}
 
 			DrawWingmanRankLetter(categoryIt->second);
+			const auto* performanceEntry = FindWingmanPerformanceEntry(*rankData, bossId, label);
+			TryOpenWingmanLogOnClick(performanceEntry ? performanceEntry->log : std::string {});
 			DrawWingmanBossCategoryCommentTooltip(*rankData, bossId, label);
 		}
 

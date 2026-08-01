@@ -530,6 +530,18 @@ static void DrawWingmanSettings() {
 			ImGui::SetTooltip("For local Overall and tab ranks, drop Mechanics/Teamplay only when including them would lower the score.\nDoes not change Wingman's API global/category ranks.");
 		}
 
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Open New Profile Pages");
+		ImGui::TableNextColumn();
+		if (ImGui::Checkbox("##UseWingmanRevProfile", &Settings::UseWingmanRevProfile)) {
+			Settings::Settings[WINDOW_LOG_PROOFS_KEY][USE_WINGMAN_REV_PROFILE] = Settings::UseWingmanRevProfile;
+			Settings::Save(SettingsPath);
+		}
+		if (ImGui::IsItemHovered()) {
+			ImGui::SetTooltip("When clicking an account name, open /rev/player/ instead of the old /kp/ profile page.");
+		}
+
 		ImGui::EndTable();
 	}
 }
